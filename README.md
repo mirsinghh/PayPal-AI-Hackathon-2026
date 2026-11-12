@@ -1,17 +1,19 @@
-# AgentDeal
+# Agent D
 
-**Your AI agent negotiates. You decide.**
+**Agent D, it always gets you the best deal.**
 
-AgentDeal is an agentic-commerce demo built for the PayPal AI Hackathon. You tell **Agent D**, an animated buyer agent, what you want and your budget. It negotiates with four store agents, explains what it achieved, and brings back competing offers. You approve one exact offer, then pay with **PayPal Sandbox**. AI proposes, the server validates, a human decides.
+_Best among the four simulated demo stores Agent D compares, not necessarily the whole market. "AgentDeal" is the project's earlier working name: it remains in technical identifiers (package, storage keys, docs folder) so existing data keeps working._
 
-> **Everything here is a simulation.** The four stores (Brisa Outlet, Zefiro Express, Atelier Norden, Korvan Direct) are fictional: their offers, prices, stock and terms are invented and they are not affiliated with any real company. AgentDeal does **not** negotiate with real merchants. Nothing ships. Payments run **only on PayPal Sandbox** (the server refuses any other environment).
+Agent D is an agentic-commerce demo built for the PayPal AI Hackathon. You tell **Agent D**, an animated buyer agent, what you want and your budget. It negotiates with four store agents, explains what it achieved, and brings back competing offers. You approve one exact offer, then pay with **PayPal Sandbox**. AI proposes, the server validates, a human decides.
+
+> **Everything here is a simulation.** The four stores (Brisa Outlet, Zefiro Express, Atelier Norden, Korvan Direct) are fictional: their offers, prices, stock and terms are invented and they are not affiliated with any real company. Agent D does **not** negotiate with real merchants. Nothing ships. Payments run **only on PayPal Sandbox** (the server refuses any other environment).
 
 ## What a user can do (V5)
 
 1. Read the landing, watch the recorded negotiation demo (no AI calls, not saved, no account needed).
 2. Create an account or sign in (Supabase Auth). Accounts are optional: guests can negotiate and pay too.
 3. Describe a purchase and a budget. Agent D reads it back.
-4. **Choose how the stores reply**: `Server Responses` or `AI Responses` (below).
+4. **Choose how the stores reply**: `Server Rules` or `AI Agents` (below).
 5. Watch the negotiation room, compare the offers in the Decision Lab, approve one.
 6. Pay with PayPal Sandbox.
 7. Come back to **History / Profile** to see requests, analyses, negotiations, payments and savings.
@@ -20,12 +22,12 @@ AgentDeal is an agentic-commerce demo built for the PayPal AI Hackathon. You tel
 
 A segmented switch on the brief screen. It is chosen **before** the negotiation, sent to the server, validated there (`responseMode: "server" | "ai"`), recorded on the session and **fixed for that negotiation**. It never changes the request analysis.
 
-| | Server Responses | AI Responses |
+| | Server Rules | AI Agents |
 |---|---|---|
 | Who writes the replies | Deterministic backend rules (`server/negotiation/*`) | Real model agents: Agent D + four store agents with private strategies and memory (`server/agents/*`) |
 | Model calls for replies | **None** | Yes, on the configured provider (Groq or Gemini) |
 | Commercial limits | Store policy, price floor, discount caps, budget | The same: every model proposal is validated by the server (reserve price, no price increases, concession caps, amount grounding). Rejected proposals are recorded, never applied |
-| If it cannot run | n/a | The session records why (`fallbackReason`) and the UI says "You chose AI Responses, but AI could not run (…). The stores answered with backup server rules, not AI." Per-turn failures become labelled `Rules fallback` messages |
+| If it cannot run | n/a | The session records why (`fallbackReason`) and the UI says "You chose AI Agents, but AI could not run (…). The stores answered with backup server rules, not AI." Per-turn failures become labelled `Rules fallback` messages, and a mixed run says how many turns each engine wrote |
 | Needs | nothing | a provider key and quota (`/api/config` tells the UI if it is available) |
 
 **Analysis is independent.** The only model-written "analysis" is the explanation of the server-chosen winner (`server/ai/explain.ts`). It uses `ANALYSIS_PROVIDER` (default `AI_PROVIDER`); the replies use `NEGOTIATION_PROVIDER` (default `AI_PROVIDER`). The switch touches neither. See `AgentDeal_DOCS/V5/AUDIT.md` for the call-graph audit of who calls which provider.
@@ -65,7 +67,7 @@ npm run dev                     # http://localhost:3000
 | `PAYPAL_ENV=sandbox`, `PAYPAL_CLIENT_ID`, `PAYPAL_CLIENT_SECRET` | payments | A PayPal **Sandbox** REST app. Only the client ID reaches the browser. |
 | `AI_PROVIDER` | AI | `groq`, `gemini` or `rules` (no model API). Default `gemini`. |
 | `ANALYSIS_PROVIDER`, `NEGOTIATION_PROVIDER` | AI | Optional per-role overrides, default `AI_PROVIDER`. |
-| `GROQ_API_KEY` (+ `GROQ_*` tuning) / `AI_API_KEY`, `AI_MODEL` | AI | Groq (GPT-OSS 120B buyer, 20B sellers) / Google Gemini. Without a key the app runs fully on labelled rule-based fallbacks and "AI Responses" shows as unavailable. |
+| `GROQ_API_KEY` (+ `GROQ_*` tuning) / `AI_API_KEY`, `AI_MODEL` | AI | Groq (GPT-OSS 120B buyer, 20B sellers) / Google Gemini. Without a key the app runs fully on labelled rule-based fallbacks and "AI Agents" shows as unavailable. |
 | `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY` | accounts + production storage | All server-only. Empty = JSON files in `./.data` and **no accounts**. |
 | `MULTI_AGENT_NEGOTIATION` | legacy default | Only the default for API callers that send no `responseMode`. The UI always sends one. |
 | `MULTI_AGENT_DEADLINE_MS`, `MULTI_AGENT_MAX_CALLS`, `AI_RPM_LIMIT`, `GROQ_MAX_CONCURRENCY` | pacing | See `.env.example` and `AgentDeal_DOCS/V4/GROQ_MULTI_AGENT_ENGINE.md`. |
@@ -104,9 +106,9 @@ Manual end-to-end (Sandbox): open `/`, watch the demo, **Start Negotiating**, pi
 | | |
 |---|---|
 | **Real** | PayPal Sandbox orders created and captured through the PayPal API; the payable amount is set on the server; human approval is enforced server-side; every price is validated against the store policy and your budget. |
-| **Real (opt-in)** | With **AI Responses**, Agent D and the four stores are real model agents with separate contexts; outputs are validated (schema, reserve price, no increases, concession caps, amount grounding). |
+| **Real (opt-in)** | With **AI Agents**, Agent D and the four stores are real model agents with separate contexts; outputs are validated (schema, reserve price, no increases, concession caps, amount grounding). |
 | **Real** | Accounts (Supabase Auth), ownership and RLS. |
-| **Simulated** | The merchants, inventory, delivery and terms. In **Server Responses** the negotiation itself is a deterministic rule engine and the screen is a replay of that run (and says so). The landing demo is a recorded run: no model, no session, not saved. |
+| **Simulated** | The merchants, inventory, delivery and terms. In **Server Rules** the negotiation itself is a deterministic rule engine and the screen is a replay of that run (and says so). The landing demo is a recorded run: no model, no session, not saved. |
 
 The UI never shows activity the backend did not record. A fallback is never presented as AI.
 

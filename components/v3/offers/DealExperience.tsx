@@ -19,6 +19,7 @@ import { dealIntel, tradeoffLines } from "@/lib/v3/deal-intel";
 import { ApprovalCard, type ApprovalState } from "./ApprovalCard";
 import { DealIntelligence } from "./DealIntelligence";
 import { CompareBoard } from "./CompareBoard";
+import { AutoBuyRun } from "@/components/v5/autobuy/AutoBuyRun";
 
 type SortKey = "match" | "price" | "delivery";
 const SORTS: { id: SortKey; label: string }[] = [
@@ -141,7 +142,7 @@ function Deal({ s, winner, labSlot, analysisLabel }: { s: SessionWithPayment; wi
         </div>
         <div className="min-w-0 flex-1 pb-4">
           <Chip tone={paid ? "success" : approvalState === "approved" ? "primary" : "success"} icon={<IconCheck size={13} />}>
-            {paid ? "Paid · confirmed by the server" : approvalState === "approved" ? "Approved by you · not paid yet" : "Negotiation finished · awaiting your approval"}
+            {paid ? "Paid · confirmed by the server" : s.checkoutMode === "auto_buy" ? "Agent Auto-Buy · purchase handled by Agent D" : approvalState === "approved" ? "Approved by you · not paid yet" : "Negotiation finished · awaiting your approval"}
           </Chip>
           <h1 ref={h1} tabIndex={-1} className="v3-display mt-4 max-w-3xl text-[clamp(2.3rem,1.4rem+4vw,4.4rem)] outline-none">
             Agent D found your <span className="v3-hl">best deal.</span>
@@ -223,7 +224,7 @@ function Deal({ s, winner, labSlot, analysisLabel }: { s: SessionWithPayment; wi
               {s.mode === "v0_rules" && s.fallbackReason && (
                 <Notice tone="warn" className="mt-3">
                   {s.responseMode === "ai"
-                    ? `You chose AI Responses, but AI could not run (${fallbackReasonLabel(s.fallbackReason)}); the stores answered with backup server rules.`
+                    ? `You chose AI Agents, but AI could not run (${fallbackReasonLabel(s.fallbackReason)}); the stores answered with backup server rules.`
                     : `Multi-agent AI negotiation wasn't used (${s.fallbackReason.replace(/_/g, " ")}); this is the rule-based simulation.`}
                 </Notice>
               )}
@@ -302,7 +303,12 @@ function Deal({ s, winner, labSlot, analysisLabel }: { s: SessionWithPayment; wi
         </div>
 
         <div className="lg:sticky lg:top-24 lg:self-start">
-          <ApprovalCard sessionId={s.sessionId} offer={winner} state={approvalState} expired={expired} paid={paid} error={error} live={live} onApprove={approve} redirecting={autoGo} onStay={() => setAutoGo(false)} />
+          {s.checkoutMode === "auto_buy" ? (
+            // Agent Auto-Buy: there is no manual approval. The purchase (or its recorded result) is shown instead.
+            <AutoBuyRun session={s} />
+          ) : (
+            <ApprovalCard sessionId={s.sessionId} offer={winner} state={approvalState} expired={expired} paid={paid} error={error} live={live} onApprove={approve} redirecting={autoGo} onStay={() => setAutoGo(false)} />
+          )}
         </div>
       </div>
     </div>

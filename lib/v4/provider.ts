@@ -102,7 +102,19 @@ export interface SummaryRow {
 }
 
 const dur = (ms: number) => (ms >= 60_000 ? `${Math.floor(ms / 60_000)} min ${Math.round((ms % 60_000) / 1000)} s` : `${(ms / 1000).toFixed(1)} s`);
-const END: Record<string, string> = { completed: "Completed", deadline: "Time budget reached", call_cap: "Call cap reached", quota_exhausted: "Provider quota exhausted", model_unavailable: "Model unavailable (repeated failures)", internal_error: "Internal error", no_offer_within_budget: "No offer within budget" };
+const ISSUE_LABEL: Record<string, string> = {
+  rate_limit: "Rate limit (requests per minute)",
+  token_limit: "Token limit (tokens per minute)",
+  daily_quota: "Daily quota exhausted",
+  timeout: "Timeout",
+  server_error: "Provider error (HTTP 5xx)",
+  invalid_response: "Invalid model response",
+  structured_failed: "Structured output failed",
+  credentials: "Credentials or model access rejected",
+  call_budget: "Call budget used up",
+  unavailable: "Provider unavailable",
+};
+const END: Record<string, string> = { completed: "Completed", deadline: "Time budget reached", call_cap: "Call cap reached", quota_exhausted: "Provider quota exhausted", model_unavailable: "Model unavailable (repeated failures)", internal_error: "Internal error", interrupted: "Interrupted (finished with server rules)", no_offer_within_budget: "No offer within budget" };
 
 /** Rows for the secondary "Technical summary". Only what was recorded: missing values are omitted, never invented. */
 export function summaryRows(run: AgentRunMeta | undefined, session: Pick<NegotiationSession, "evaluation">): SummaryRow[] {
@@ -117,6 +129,7 @@ export function summaryRows(run: AgentRunMeta | undefined, session: Pick<Negotia
   rows.push({ label: "Tokens", value: `${run.inputTokens} in · ${run.outputTokens} out${typeof run.reasoningTokens === "number" ? ` (reasoning reported: ${run.reasoningTokens})` : ""}` });
   if (typeof run.http429 === "number") rows.push({ label: "HTTP 429 (rate limit)", value: String(run.http429) });
   rows.push({ label: "Rules fallbacks", value: String(run.fallbackCount) });
+  if (run.aiIssue) rows.push({ label: "AI provider issue", value: ISSUE_LABEL[run.aiIssue.kind] ?? run.aiIssue.kind });
   const causes = Object.entries(run.fallbackCauses ?? {}).filter(([, n]) => n > 0);
   if (causes.length) rows.push({ label: "Fallback causes", value: causes.map(([k, n]) => `${k.replace(/_/g, " ")} ×${n}`).join(", ") });
   rows.push({ label: "Proposals rejected by the server", value: String(run.rejectedProposals) });

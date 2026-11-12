@@ -13,11 +13,11 @@ export const FLOW = [
 
 export function Logo() {
   return (
-    <Link href="/" aria-label="AgentDeal home" className="group flex items-center gap-2.5 rounded-v3-md">
+    <Link href="/" aria-label="Agent D home" className="group flex items-center gap-2.5 rounded-v3-md">
       <span aria-hidden className="grid size-10 place-items-center overflow-hidden rounded-[12px] border border-v3-line bg-v3-soft transition-transform duration-(--v3-d2) group-hover:-rotate-3">
         <AgentDPose sprite="idle" size={34} />
       </span>
-      <span className="font-v3-head text-[1.35rem] font-extrabold tracking-tight">AgentDeal</span>
+      <span className="font-v3-head text-[1.35rem] font-extrabold tracking-tight">Agent D</span>
       <span className="v3-chip v3-chip--accent !py-0.5 !text-[0.7rem]">V5</span>
     </Link>
   );

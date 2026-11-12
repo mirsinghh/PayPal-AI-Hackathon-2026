@@ -5,7 +5,9 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { api, ApiFailure } from "@/lib/api";
 import { formatEur } from "@/shared/format";
 import { SELLER_BRANDS } from "@/shared/sellers";
-import { SELLER_IDS, type SellerId } from "@/shared/contracts/types";
+import { SELLER_IDS, type PublicMandate, type SellerId } from "@/shared/contracts/types";
+import { AuthorizationRecord } from "@/components/v5/autobuy/AutoBuyRun";
+import { CHECKOUT_LABEL, MANDATE_STATUS_LABEL } from "@/lib/v5/autobuy";
 import { Chip, Notice, Spinner, btn, type ChipTone } from "@/components/v3/ui";
 import { MODE_LABEL, fallbackReasonLabel } from "@/lib/v5/response-mode";
 import type { History, HistoryPayment, HistorySession } from "@/server/db/history";
@@ -126,8 +128,24 @@ export const FACETS: { id: Facet; label: string }[] = [
   { id: "negotiations", label: "Negotiations" },
 ];
 
+/** The user's Agent Auto-Buy mandates by negotiation. Failure just means "no Auto-Buy data": the rest of the history is unaffected. */
+function useMandates(): Map<string, PublicMandate> {
+  const [list, setList] = useState<PublicMandate[]>([]);
+  useEffect(() => {
+    let alive = true;
+    api<{ mandates: PublicMandate[] }>("/api/auto-buy/mandates", { cache: "no-store" })
+      .then((r) => alive && setList(r.mandates))
+      .catch(() => undefined);
+    return () => {
+      alive = false;
+    };
+  }, []);
+  return useMemo(() => new Map(list.map((m) => [m.sessionId, m])), [list]);
+}
+
 export function HistoryList({ data, facet, limit }: { data: Loaded; facet: Facet; limit?: number }) {
   const rows = useMemo(() => (limit ? data.sessions.slice(0, limit) : data.sessions), [data.sessions, limit]);
+  const mandates = useMandates();
   if (rows.length === 0)
     return (
       <div className="v3-card p-8 text-center">
@@ -140,15 +158,17 @@ export function HistoryList({ data, facet, limit }: { data: Loaded; facet: Facet
     <ul className="space-y-3">
       {rows.map((s) => (
         <li key={s.id}>
-          <Row s={s} pay={paymentFor(data.payments, s.id)} facet={facet} />
+          <Row s={s} pay={paymentFor(data.payments, s.id)} facet={facet} mandate={mandates.get(s.id)} />
         </li>
       ))}
     </ul>
   );
 }
 
-function Row({ s, pay, facet }: { s: HistorySession; pay: HistoryPayment | undefined; facet: Facet }) {
-  const st = statusChip(s, pay);
+function Row({ s, pay, facet, mandate }: { s: HistorySession; pay: HistoryPayment | undefined; facet: Facet; mandate?: PublicMandate }) {
+  // Agent Auto-Buy: the mandate's own state explains what happened. "Paid" still comes only from a completed payment record.
+  const base = statusChip(s, pay);
+  const st = mandate && pay?.status !== "completed" ? { tone: (mandate.status === "executed" ? "success" : mandate.status === "active" ? "primary" : mandate.status === "pending_reconciliation" ? "warn" : "neutral") as ChipTone, text: MANDATE_STATUS_LABEL[mandate.status] } : base;
   const mode = modeLabel(s);
   const finished = s.status === "ready" || s.status === "completed";
   return (
@@ -164,6 +184,7 @@ function Row({ s, pay, facet }: { s: HistorySession; pay: HistoryPayment | undef
         </div>
         <div className="flex flex-wrap gap-1.5">
           <Chip tone={st.tone}>{st.text}</Chip>
+          <Chip tone={mandate ? "primary" : "neutral"}>{mandate ? CHECKOUT_LABEL.auto_buy : CHECKOUT_LABEL.manual}</Chip>
           {facet === "negotiations" && <Chip tone={mode.tone}>{mode.text}</Chip>}
         </div>
       </div>
@@ -191,6 +212,12 @@ function Row({ s, pay, facet }: { s: HistorySession; pay: HistoryPayment | undef
           )}
           {s.responseMode === "ai" && s.engineMode !== "multi_agent" && <p className="mt-1 text-v3-warn">AI could not run ({fallbackReasonLabel(s.fallbackReason)}); server rules answered instead.</p>}
           {pay && <p className="mt-1">PayPal Sandbox order <span className="font-mono text-xs">{pay.paypalOrderId ?? "—"}</span> · {pay.status}{pay.amountCents !== null && <> · {formatEur(pay.amountCents)}</>}</p>}
+          <p className="mt-1 text-xs">Sandbox payment · simulated stores</p>
+          {mandate && (
+            <div className="mt-3">
+              <AuthorizationRecord mandate={mandate} />
+            </div>
+          )}
         </div>
       )}
 

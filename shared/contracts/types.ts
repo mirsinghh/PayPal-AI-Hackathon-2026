@@ -160,7 +160,24 @@ export interface AgentRunMeta {
   fallbackCauses?: Record<string, number>;
   /** The offer Agent D itself proposed in its last final turn (null if none). The server's ranking decides; a difference is a recorded discrepancy. */
   agentProposalOfferId?: string | null;
+  /** The most actionable provider problem during the run (absent when the provider never failed). */
+  aiIssue?: AiIssue;
+  /** Set when a run that stopped without finishing was completed afterwards with server rules (events kept, none repeated). */
+  recoveredWithRules?: boolean;
   roles?: Record<string, { attempts: number; succeeded: number; failed: number; http429: number; inputTokens: number; outputTokens: number; reasoningTokens: number | null; models: string[] }>;
+}
+
+/** Which provider limit a 429 refers to (requests/tokens per minute/day), when the provider's own message says. */
+export type LimitScope = "rpm" | "tpm" | "rpd" | "tpd";
+
+/** What went wrong with an AI provider, told apart: a daily quota is not a rate limit, a bad key is not a timeout. */
+export type AiIssueKind = "rate_limit" | "token_limit" | "daily_quota" | "timeout" | "server_error" | "invalid_response" | "structured_failed" | "credentials" | "call_budget" | "unavailable";
+
+/** `retryAfterMs` exists only when the provider reported it. It is never estimated. */
+export interface AiIssue {
+  kind: AiIssueKind;
+  retryAfterMs: number | null;
+  scope: LimitScope | null;
 }
 
 export type AiStatus = "pending" | "succeeded" | "fallback" | "failed";
@@ -183,12 +200,24 @@ export interface NegotiationSession {
   mode?: NegotiationMode;
   /** Why the V0 simulation was used instead of the multi-agent run (null when not a fallback). */
   fallbackReason?: string | null;
+  /** When that reason was a provider problem: what it was and, if the provider said so, when to retry. */
+  fallbackIssue?: AiIssue | null;
   /** The response mode requested before the negotiation (absent on sessions created before V5). Fixed for the whole session. */
   responseMode?: ResponseMode;
   /** Supabase user that owns this session, set by the server from the verified login (never from the client). Null/absent = anonymous. */
   ownerId?: string | null;
   agentRun?: AgentRunMeta;
+  /** V5 Auto-Buy: how this negotiation is paid. Absent = "manual" (every session created before Auto-Buy). Fixed for the session. */
+  checkoutMode?: CheckoutMode;
+  /** The purchase mandate bound to this negotiation (Auto-Buy only). */
+  mandateId?: string | null;
+  /** Who approved `approvedOfferId`: the user clicking Approve, or the server acting inside a pre-authorised mandate. */
+  approvedBy?: "user" | "mandate";
 }
+
+/** manual: the user reviews, approves and pays with PayPal's button. auto_buy: Agent D buys inside a pre-authorised mandate. */
+export const CHECKOUT_MODES = ["manual", "auto_buy"] as const;
+export type CheckoutMode = (typeof CHECKOUT_MODES)[number];
 
 export type PaymentStatus =
   | "creating"
@@ -217,7 +246,92 @@ export interface PaymentAttempt {
   failureCode: string | null;
   /** Owner of the negotiation this payment belongs to (copied from the session, which got it from the verified login). */
   ownerId?: string | null;
+  /** Absent = manual. */
+  checkoutMode?: CheckoutMode;
+  /** Mandate under which this payment was taken (Auto-Buy only). */
+  mandateId?: string | null;
 }
+
+/* ---------- V5 Auto-Buy ---------- */
+
+/** The only wording that counts as consent. It is stored with the mandate, together with its version. */
+export const MANDATE_AUTHORIZATION_TEXT = "Authorize Agent D to purchase one eligible offer within these limits.";
+export const MANDATE_TEXT_VERSION = "1";
+/** How long a mandate stays usable. Offers expire after 30 minutes, so the mandate never outlives them. */
+export const MANDATE_TTL_MS = 30 * 60 * 1000;
+
+export type MandateStatus =
+  | "active" // authorised, waiting for the negotiation to finish
+  | "executing" // claimed by exactly one execution
+  | "executed" // purchase captured and verified
+  | "pending_reconciliation" // PayPal outcome uncertain: never re-run, only reconcile
+  | "cancelled" // the user cancelled before execution
+  | "expired"
+  | "blocked" // the server refused to buy (ineligible, over budget, condition not met...)
+  | "failed"; // PayPal refused / needs the buyer
+
+export interface MandateEvidence {
+  /** Append-only log of every transition, written by the server. */
+  at: string;
+  type: string;
+  status: MandateStatus;
+  detail?: string;
+}
+
+export interface PurchaseMandate {
+  mandateId: string;
+  /** Verified Supabase user. Never taken from the client. */
+  ownerId: string;
+  sessionId: string;
+  productQuery: string;
+  /** Hard ceiling in integer cents. Equals the budget of the negotiation the mandate was created with. */
+  budgetCents: number;
+  currency: "EUR";
+  priority: Priority;
+  /** Preferences the user selected become MANDATORY conditions for an Auto-Buy purchase. */
+  requiredConditions: Preference[];
+  /** One purchase per mandate. */
+  maxPurchases: 1;
+  /** Reference to the user's PayPal authorisation (never the token itself). */
+  paymentMethodId: string;
+  paymentMethodLabel: string;
+  authorizationText: string;
+  authorizationTextVersion: string;
+  consentedAt: string;
+  createdAt: string;
+  expiresAt: string;
+  status: MandateStatus;
+  updatedAt: string;
+  /** Filled when the purchase ran. */
+  offerId: string | null;
+  paymentAttemptId: string | null;
+  failureCode: string | null;
+  evidence: MandateEvidence[];
+}
+
+/** What the user may see of a mandate. Contains no token and no PayPal secret. */
+export type PublicMandate = Omit<PurchaseMandate, "ownerId">;
+
+export type PaymentMethodStatus = "pending" | "active" | "revoked" | "failed";
+
+/** The user's PayPal authorisation for future charges (Vault). `tokenCipher` is server-only and encrypted. */
+export interface PaymentMethodAuth {
+  methodId: string;
+  ownerId: string;
+  status: PaymentMethodStatus;
+  setupTokenId: string;
+  paypalCustomerId: string | null;
+  /** PayPal's vault payment-token id, AES-256-GCM encrypted. Never leaves the server. */
+  tokenCipher: string | null;
+  payerEmail: string | null;
+  createdAt: string;
+  updatedAt: string;
+  verifiedAt: string | null;
+  revokedAt: string | null;
+  failureCode: string | null;
+}
+
+export type PublicPaymentMethod = Pick<PaymentMethodAuth, "methodId" | "status" | "payerEmail" | "createdAt" | "verifiedAt">;
 
 export interface ApiError {
   code: string;

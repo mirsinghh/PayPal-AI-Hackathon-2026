@@ -6,7 +6,7 @@ import { WIRE } from "@/server/ai/groq";
 import { rulesFallback } from "@/server/ai/explain";
 import { OFFER_TTL_MS } from "@/server/negotiation/scenario";
 import { CATEGORY_IMAGE, SELLER_PROFILES, catalogItem, type CatalogItem, type CategoryId, type SellerProfile } from "./catalog";
-import { LIMITS, deadlineMs, maxModelCalls } from "./config";
+import { LIMITS, deadlineMs, maxModelCalls, tripQuotaBreaker } from "./config";
 import { Agent, RunBudget, ask, type AskResult, type ModelCaller, type RateLimiter } from "./model";
 import { EventRecorder } from "./recorder";
 import { buyerFinalSchema, buyerRoundByStoreSchema, sellerReplySchema, type SellerReply } from "./schemas";
@@ -73,6 +73,10 @@ export function fallbackCause(r: AskResult<unknown>): string {
   if (r.ok) return "unknown";
   if (r.reason === "call_cap") return "call_budget";
   if (r.reason === "deadline") return "deadline";
+  // Told apart when the provider said which limit it was: a daily quota or bad credentials are not "a rate limit".
+  if (r.issue?.kind === "daily_quota") return "daily_quota";
+  if (r.issue?.kind === "credentials") return "credentials";
+  if (r.issue?.kind === "token_limit" && r.reason !== "invalid_output") return "token_limit";
   if (r.reason === "quota_exhausted") return "quota_exhausted";
   const last = r.rejections.at(-1) ?? "";
   if (last.startsWith("call_failed")) {
@@ -160,6 +164,7 @@ export async function runMultiAgentNegotiation(
       durationMs: now() - startedAt,
       endedReason: stoppedReason ?? "completed",
       turns: { ai: budget.succeeded, fallback: fallbackCount },
+      ...(budget.issue ? { aiIssue: budget.issue } : {}),
       fallbackCauses: { ...fallbackCauses },
       roles: Object.fromEntries(Object.entries(r).map(([k, v]) => [k, { attempts: v.attempts, succeeded: v.succeeded, failed: v.failed, http429: v.http429, inputTokens: v.inputTokens, outputTokens: v.outputTokens, reasoningTokens: v.reasoningTokens, models: v.models }])),
     };
@@ -197,7 +202,11 @@ export async function runMultiAgentNegotiation(
 
   const note = (r: AskResult<unknown>) => {
     if (r.ok) modelName = r.model;
-    else if (STOP_REASONS.has(r.reason)) stoppedReason ??= r.reason;
+    else if (STOP_REASONS.has(r.reason)) {
+      stoppedReason ??= r.reason;
+      // Repeated provider failures: stop sending the next negotiations there for a minute instead of making each user wait.
+      if (r.reason === "model_unavailable") tripQuotaBreaker(60_000, opts.engine?.provider ?? "gemini", Date.now(), budget.issue ?? { kind: "unavailable", retryAfterMs: null, scope: null });
+    }
     rejectedProposals += r.rejections.filter((x) => !x.startsWith("call_failed")).length;
   };
 

@@ -1,12 +1,13 @@
 import { randomUUID } from "node:crypto";
-import type { NegotiationSession, ProductIntent, ResponseMode } from "@/shared/contracts/types";
+import type { AiIssue, NegotiationSession, ProductIntent, ResponseMode } from "@/shared/contracts/types";
+import { breakerIssue, breakerReason } from "@/server/ai/limits";
 import { explain, type LlmCaller } from "@/server/ai/explain";
 import { explanationCaller, resolveEngine } from "@/server/ai/provider";
 import { composeEvents } from "./events";
 import { rankOffers } from "./ranking";
 import { buildScenario } from "./scenario";
 import { catalogForCategory, matchCategory } from "@/server/agents/catalog";
-import { deadlineMs, modelRpm, multiAgentEnabled, quotaBreakerOpen, reserveRunSlot, singleCallEngine } from "@/server/agents/config";
+import { deadlineMs, modelRpm, multiAgentEnabled, quotaBreakerInfo, reserveRunSlot, singleCallEngine } from "@/server/agents/config";
 import { sharedRateLimiter, type ModelCaller } from "@/server/agents/model";
 import { runMultiAgentNegotiation } from "@/server/agents/run";
 import { runSingleCallNegotiation } from "@/server/agents/single";
@@ -57,8 +58,13 @@ export function isOfferExpired(s: NegotiationSession, offerId: string, now = new
 
 /* ---------- Phase 2: real multi-agent negotiation (behind MULTI_AGENT_NEGOTIATION=true) ---------- */
 
-/** A run gets its wall-clock budget plus a margin to finalise before it is considered dead. */
-export const staleNegotiationMs = () => deadlineMs() + 60_000;
+/**
+ * A run gets its wall-clock budget plus a margin to finalise before it is considered dead. The margin is short on purpose:
+ * a run killed by the platform must not leave the user watching "negotiating" for minutes (it is then completed with server
+ * rules, see server/agents/recover.ts).
+ */
+const STALE_MARGIN_MS = 25_000;
+export const staleNegotiationMs = () => deadlineMs() + STALE_MARGIN_MS;
 
 export interface StartedNegotiation {
   session: NegotiationSession;
@@ -88,10 +94,10 @@ export async function startNegotiation(
 ): Promise<StartedNegotiation> {
   const requested: ResponseMode = opts.responseMode ?? (multiAgentEnabled() ? "ai" : "server");
   const owner = opts.ownerId ? { ownerId: opts.ownerId } : {};
-  const v0 = async (reason: string | null): Promise<StartedNegotiation> => {
+  const v0 = async (reason: string | null, issue: AiIssue | null = null): Promise<StartedNegotiation> => {
     // The analysis (explanation) provider is configured on its own and is the same for both response modes.
     const session = await prepareSession(intent, { now: opts.now, ...(opts.explainCaller !== undefined ? { caller: opts.explainCaller } : {}) });
-    return { session: { ...session, mode: "v0_rules", fallbackReason: reason, responseMode: requested, ...owner }, run: null };
+    return { session: { ...session, mode: "v0_rules", fallbackReason: reason, ...(issue ? { fallbackIssue: issue } : {}), responseMode: requested, ...owner }, run: null };
   };
   if (requested === "server") return v0(null);
 
@@ -103,7 +109,12 @@ export async function startNegotiation(
   if (!category) return v0("no_catalog_match");
   const reachable = catalogForCategory(category).some((c) => c.minPriceCents + c.shippingCents <= intent.budgetCents && c.stock > 0);
   if (!reachable) return v0("budget_below_catalog");
-  if (quotaBreakerOpen(engine?.provider ?? "gemini")) return v0("model_quota_exhausted");
+  // A provider that is known to be limited, unavailable or rejecting our key is not tried again: straight to labelled server rules.
+  const breaker = quotaBreakerInfo(engine?.provider ?? "gemini");
+  if (breaker) {
+    const issue = breakerIssue(breaker);
+    return v0(breakerReason(issue), issue);
+  }
   if (!reserveRunSlot()) return v0("cost_cap");
 
   const now = opts.now ?? new Date();

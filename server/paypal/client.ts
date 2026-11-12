@@ -49,7 +49,7 @@ async function accessToken(): Promise<string> {
 }
 
 async function call<T>(
-  method: "GET" | "POST",
+  method: "GET" | "POST" | "DELETE",
   path: string,
   opts: { body?: unknown; requestId?: string } = {},
 ): Promise<T> {
@@ -113,6 +113,8 @@ export function createPayPalOrder(args: {
   description: string;
   customId: string;
   requestId: string;
+  /** Auto-Buy only: the buyer's vaulted PayPal payment token. Absent = the normal order the buyer approves in PayPal. */
+  vaultId?: string;
 }) {
   return call<PayPalOrder>("POST", "/v2/checkout/orders", {
     requestId: args.requestId,
@@ -125,8 +127,71 @@ export function createPayPalOrder(args: {
           amount: { currency_code: "EUR", value: centsToValue(args.amountCents) },
         },
       ],
+      ...(args.vaultId ? { payment_source: { paypal: { vault_id: args.vaultId } } } : {}),
     },
   });
+}
+
+/* ---------- Vault (save payment methods): the buyer's one-time PayPal authorisation for later charges ---------- */
+
+export interface PayPalLink {
+  rel: string;
+  href: string;
+  method?: string;
+}
+export interface PayPalSetupToken {
+  id: string;
+  status: string;
+  customer?: { id?: string };
+  links?: PayPalLink[];
+}
+export interface PayPalPaymentToken {
+  id: string;
+  customer?: { id?: string };
+  payment_source?: { paypal?: { email_address?: string; payer_id?: string } };
+}
+
+/** Step 1: ask PayPal for an approval page where the buyer consents to save their PayPal for later purchases. */
+export function createSetupToken(args: { requestId: string; returnUrl: string; cancelUrl: string; description: string }) {
+  return call<PayPalSetupToken>("POST", "/v3/vault/setup-tokens", {
+    requestId: args.requestId,
+    body: {
+      payment_source: {
+        paypal: {
+          description: args.description.slice(0, 127),
+          permit_multiple_payment_tokens: false,
+          usage_pattern: "IMMEDIATE",
+          usage_type: "MERCHANT",
+          customer_type: "CONSUMER",
+          experience_context: {
+            shipping_preference: "NO_SHIPPING",
+            payment_method_preference: "IMMEDIATE_PAYMENT_REQUIRED",
+            brand_name: "AgentDeal (Sandbox)",
+            locale: "en-US",
+            return_url: args.returnUrl,
+            cancel_url: args.cancelUrl,
+          },
+        },
+      },
+    },
+  });
+}
+
+export function getSetupToken(setupTokenId: string) {
+  return call<PayPalSetupToken>("GET", `/v3/vault/setup-tokens/${encodeURIComponent(setupTokenId)}`);
+}
+
+/** Step 2: after the buyer approved, exchange the setup token for the reusable payment token. */
+export function createPaymentToken(setupTokenId: string, requestId: string) {
+  return call<PayPalPaymentToken>("POST", "/v3/vault/payment-tokens", {
+    requestId,
+    body: { payment_source: { token: { id: setupTokenId, type: "SETUP_TOKEN" } } },
+  });
+}
+
+/** Revocation: removes the saved method on PayPal's side, so no further charge is possible. */
+export function deletePaymentToken(paymentTokenId: string) {
+  return call<Record<string, never>>("DELETE", `/v3/vault/payment-tokens/${encodeURIComponent(paymentTokenId)}`);
 }
 
 export function capturePayPalOrder(orderId: string, requestId: string) {

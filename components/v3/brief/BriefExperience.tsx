@@ -1,9 +1,9 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useId, useMemo, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
+import { useEffect, useId, useMemo, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
 import { api, ApiFailure } from "@/lib/api";
-import { PREFERENCES, PRIORITIES, type Preference, type Priority, type ResponseMode } from "@/shared/contracts/types";
+import { MANDATE_AUTHORIZATION_TEXT, PREFERENCES, PRIORITIES, type CheckoutMode, type Preference, type Priority, type ResponseMode } from "@/shared/contracts/types";
 import { AI_DEMO_NOTICE } from "@/shared/format";
 import { EXAMPLE_REQUESTS } from "@/shared/products";
 import { PREF_LABEL, PRIORITY_LABEL, deriveMission, readBack, toIntent } from "@/lib/v3/brief";
@@ -15,6 +15,20 @@ import { AgentDActor } from "@/components/v3/mascot/AgentD";
 import { Chip, Notice, Spinner, btn } from "@/components/v3/ui";
 import { IconArrow, IconCheck } from "@/components/v3/icons";
 import { ResponseModeSwitch } from "@/components/v5/ResponseModeSwitch";
+import { CheckoutModeSwitch } from "@/components/v5/CheckoutModeSwitch";
+import { AiUnavailableNotice, isTemporaryAiReason } from "@/components/v5/AiNotice";
+import { MandatePanel } from "@/components/v5/autobuy/MandatePanel";
+import { useAutoBuyStatus } from "@/lib/v5/use-autobuy";
+
+const DRAFT_KEY = "agentdeal:brief-draft";
+type BannerState = { tone: "success" | "warn" | "danger" | "info"; text: string };
+const RETURN_NOTICE: Record<string, BannerState> = {
+  ready: { tone: "success", text: "PayPal confirmed your authorisation. Review the mandate below and confirm it to turn on Agent Auto-Buy." },
+  cancelled: { tone: "warn", text: "You cancelled on PayPal, so nothing was authorised." },
+  not_approved: { tone: "warn", text: "PayPal did not confirm the authorisation. Nothing was authorised. You can try again." },
+  login_required: { tone: "warn", text: "Sign in first, then authorise PayPal." },
+  error: { tone: "danger", text: "We could not complete the PayPal authorisation. Nothing was authorised. Try again." },
+};
 
 /**
  * "Tell Agent D": the same extraction as the classic brief, presented as handing a mission to your agent.
@@ -26,11 +40,22 @@ export function BriefExperience() {
   const router = useRouter();
   const base = useAppBase();
   const ids = { prompt: useId(), query: useId(), budget: useId() };
-  const { aiAvailable, aiReason } = useEngineMode();
+  const engine = useEngineMode();
+  const { aiAvailable, aiReason } = engine;
+  const [retryingAi, setRetryingAi] = useState(false);
   // The user picks who writes the stores' replies before starting. Server Responses is the safe default.
   const [responseMode, setResponseMode] = useState<ResponseMode>("server");
   const effectiveMode: ResponseMode = responseMode === "ai" && !aiAvailable ? "server" : responseMode;
   const agent = useAgentDirector("idle");
+  // V5 Auto-Buy. Manual Checkout is the default and needs no account. Auto-Buy is offered only if the server confirms it can charge.
+  const auto = useAutoBuyStatus();
+  const [checkoutMode, setCheckoutMode] = useState<CheckoutMode>("manual");
+  const [consent, setConsent] = useState(false);
+  const [returnBanner, setReturnBanner] = useState<BannerState | null>(null);
+  const autoAvailable = !!auto.status?.available;
+  const effectiveCheckout: CheckoutMode = checkoutMode === "auto_buy" && !autoAvailable ? "manual" : checkoutMode;
+  const authorizedMethod = auto.status?.paymentMethod?.status === "active";
+  const autoReady = effectiveCheckout === "auto_buy" && !!auto.status?.signedIn && authorizedMethod && consent;
 
   const [prompt, setPrompt] = useState("");
   const [queryOverride, setQueryOverride] = useState<string | null>(null);
@@ -46,6 +71,45 @@ export function BriefExperience() {
 
   const mission = useMemo(() => deriveMission({ prompt, queryOverride, budgetOverride, priority, preferences: prefs }), [prompt, queryOverride, budgetOverride, priority, prefs]);
   const errors = { ...(touched ? mission.errors : {}), ...fieldErrors };
+
+  // Leaving for login or PayPal and coming back: keep what the user typed (this browser tab only, never sent anywhere).
+  function saveDraft() {
+    try {
+      sessionStorage.setItem(DRAFT_KEY, JSON.stringify({ prompt, queryOverride, budgetOverride, priority, prefs, responseMode }));
+    } catch {
+      /* storage can be blocked: the brief just starts empty */
+    }
+  }
+  useEffect(() => {
+    // Runs once on arrival: restores the draft and explains where the user is coming back from (?autobuy=...).
+    // Everything happens inside the timer callback, so a cancelled first run (React strict mode) leaves the stored draft intact.
+    const t = window.setTimeout(() => {
+      const code = new URLSearchParams(window.location.search).get("autobuy");
+      let draft: Record<string, unknown> | null = null;
+      try {
+        draft = JSON.parse(sessionStorage.getItem(DRAFT_KEY) ?? "null");
+        sessionStorage.removeItem(DRAFT_KEY);
+      } catch {
+        draft = null;
+      }
+      if (draft && typeof draft.prompt === "string") {
+        setPrompt(draft.prompt);
+        setQueryOverride(typeof draft.queryOverride === "string" ? draft.queryOverride : null);
+        setBudgetOverride(typeof draft.budgetOverride === "string" ? draft.budgetOverride : null);
+        if (PRIORITIES.includes(draft.priority as Priority)) setPriority(draft.priority as Priority);
+        if (Array.isArray(draft.prefs)) setPrefs(draft.prefs.filter((p): p is Preference => PREFERENCES.includes(p as Preference)));
+        if (draft.responseMode === "ai" || draft.responseMode === "server") setResponseMode(draft.responseMode);
+      }
+      if (code) {
+        setReturnBanner(RETURN_NOTICE[code] ?? null);
+        setCheckoutMode("auto_buy");
+        window.history.replaceState(null, "", window.location.pathname);
+      } else if (draft) {
+        setCheckoutMode("auto_buy"); // the draft only exists when the user left for login or PayPal in Auto-Buy mode
+      }
+    }, 0);
+    return () => window.clearTimeout(t);
+  }, []);
 
   /** Agent D leans in while the user types: one short thinking reaction per burst, never one per keystroke. */
   function listen() {
@@ -63,11 +127,23 @@ export function BriefExperience() {
       agent.react({ key: `invalid:${Date.now()}`, state: "surprised" });
       return;
     }
+    // Auto-Buy needs login + PayPal authorisation + the explicit consent. The server checks all of it again.
+    if (effectiveCheckout === "auto_buy" && !autoReady) {
+      setServerError("Sign in, authorise PayPal and confirm the authorisation to use Agent Auto-Buy.");
+      agent.react({ key: `invalid:${Date.now()}`, state: "surprised" });
+      return;
+    }
     inflight.current = true;
     setSubmitting(true);
     setServerError(null);
     try {
-      const res = await api<{ sessionId: string }>("/api/negotiations", { method: "POST", body: JSON.stringify({ ...toIntent(mission, priority, prefs), responseMode: effectiveMode }) });
+      const res = await api<{ sessionId: string }>("/api/negotiations", { method: "POST", body: JSON.stringify({
+          ...toIntent(mission, priority, prefs),
+          responseMode: effectiveMode,
+          // Manual Checkout sends exactly what it always sent. Auto-Buy adds the mode and the consent sentence the user confirmed.
+          ...(effectiveCheckout === "auto_buy" ? { checkoutMode: "auto_buy", authorization: { text: MANDATE_AUTHORIZATION_TEXT } } : {}),
+        }),
+      });
       // Local demo history (this browser only): the id, the request and the budget. No payment or secret data.
       rememberNegotiation({ sessionId: res.sessionId, createdAt: new Date().toISOString(), query: mission.query, budgetCents: mission.budgetCents as number });
       router.push(`${base}/negotiation/${res.sessionId}`);
@@ -94,7 +170,15 @@ export function BriefExperience() {
     }
   }
 
-  const status = submitting ? "Sending Agent D on the mission…" : mission.ready ? "Mission ready. Agent D has what it needs." : mission.query.length < 3 ? "Describe a product to begin." : "Add a budget to continue.";
+  const status = submitting
+    ? "Sending Agent D on the mission…"
+    : !mission.ready
+      ? mission.query.length < 3
+        ? "Describe a product to begin."
+        : "Add a budget to continue."
+      : effectiveCheckout === "auto_buy" && !autoReady
+        ? "Complete the Agent Auto-Buy steps to continue."
+        : "Mission ready. Agent D has what it needs.";
 
   return (
     <div className="mx-auto w-full max-w-[1240px] px-4 py-10 sm:px-6 sm:py-14 lg:px-8">
@@ -281,7 +365,35 @@ export function BriefExperience() {
               </fieldset>
 
               <div className="border-t border-dashed border-v3-line-strong pt-5">
-                <ResponseModeSwitch value={effectiveMode} onChange={setResponseMode} aiAvailable={aiAvailable} aiReason={aiReason} disabled={submitting} />
+                <ResponseModeSwitch value={effectiveMode} onChange={setResponseMode} aiAvailable={aiAvailable} aiReason={aiReason} ai={engine.ai} disabled={submitting} />
+                {engine.known && !aiAvailable && isTemporaryAiReason(aiReason) && (
+                  <AiUnavailableNotice
+                    className="mt-3"
+                    issue={engine.aiIssue}
+                    reason={aiReason}
+                    onContinueWithServerRules={responseMode === "ai" ? () => setResponseMode("server") : undefined}
+                    onTryAgain={() => {
+                      setRetryingAi(true);
+                      void engine.refresh().finally(() => setRetryingAi(false));
+                    }}
+                    trying={retryingAi}
+                  />
+                )}
+              </div>
+
+              <div className="space-y-4 border-t border-dashed border-v3-line-strong pt-5">
+                <CheckoutModeSwitch value={effectiveCheckout} onChange={setCheckoutMode} autoAvailable={autoAvailable} autoChecking={!auto.known} autoReason={auto.status?.reason} disabled={submitting} />
+                {effectiveCheckout === "auto_buy" && auto.status && (
+                  <MandatePanel
+                    status={auto.status}
+                    mission={{ query: mission.query, budgetCents: mission.budgetCents, conditions: prefs }}
+                    consent={consent}
+                    onConsent={setConsent}
+                    onBeforeLeave={saveDraft}
+                    onChanged={() => void auto.refresh()}
+                    banner={returnBanner}
+                  />
+                )}
               </div>
 
               <p className="border-t border-dashed border-v3-line-strong pt-4 text-sm text-v3-ink2">
@@ -294,14 +406,14 @@ export function BriefExperience() {
               <p aria-live="polite" className="text-sm font-semibold text-v3-ink2">
                 {status}
               </p>
-              <button type="submit" disabled={submitting} className={btn("primary", "lg", "w-full")}>
+              <button type="submit" disabled={submitting || (effectiveCheckout === "auto_buy" && !autoReady)} className={btn("primary", "lg", "w-full")}>
                 {submitting ? (
                   <>
                     <Spinner /> Starting…
                   </>
                 ) : (
                   <>
-                    Start negotiating <IconArrow size={20} />
+                    {effectiveCheckout === "auto_buy" ? "Start Auto-Buy negotiation" : "Start negotiating"} <IconArrow size={20} />
                   </>
                 )}
               </button>

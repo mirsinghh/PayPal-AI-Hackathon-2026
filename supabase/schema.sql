@@ -94,3 +94,39 @@ create policy profiles_update_own on public.profiles for update to authenticated
 revoke insert, update, delete on public.sessions from anon, authenticated;
 revoke insert, update, delete on public.payments from anon, authenticated;
 revoke insert, delete on public.profiles from anon, authenticated;
+
+-- ---- V5 Agent Auto-Buy: PayPal authorisations (Vault) and purchase mandates. Safe to re-run. ----
+-- payment_methods holds an ENCRYPTED PayPal payment token (AES-256-GCM, key only in the server env). It has RLS ON and NO
+-- policy at all: not even its owner can read it with the anon key. Only the server (secret key) reads or writes it.
+create table if not exists public.payment_methods (
+  id          text primary key,
+  user_id     uuid not null references auth.users (id) on delete cascade,
+  status      text not null,
+  data        jsonb not null,
+  updated_at  timestamptz not null default now(),
+  created_at  timestamptz not null default now()
+);
+create index if not exists payment_methods_user_idx on public.payment_methods (user_id, created_at desc);
+
+-- A mandate = the user's pre-authorisation for ONE purchase. Writes only from the server; the owner may read their own.
+create table if not exists public.purchase_mandates (
+  id          text primary key,
+  user_id     uuid not null references auth.users (id) on delete cascade,
+  session_id  text not null,
+  status      text not null,
+  data        jsonb not null,
+  updated_at  timestamptz not null default now(),
+  created_at  timestamptz not null default now()
+);
+create index if not exists purchase_mandates_user_idx on public.purchase_mandates (user_id, created_at desc);
+-- At most one mandate per negotiation, enforced by the database too.
+create unique index if not exists purchase_mandates_session_idx on public.purchase_mandates (session_id);
+
+alter table public.payment_methods enable row level security;
+alter table public.purchase_mandates enable row level security;
+
+drop policy if exists purchase_mandates_select_own on public.purchase_mandates;
+create policy purchase_mandates_select_own on public.purchase_mandates for select to authenticated using (auth.uid() = user_id);
+
+revoke all on public.payment_methods from anon, authenticated;
+revoke insert, update, delete on public.purchase_mandates from anon, authenticated;

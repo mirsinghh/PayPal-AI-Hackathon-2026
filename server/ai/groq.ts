@@ -1,5 +1,6 @@
 import { SELLER_BRANDS } from "@/shared/sellers";
 import { SELLER_IDS } from "@/shared/contracts/types";
+import { limitScopeFromMessage } from "@/server/ai/limits";
 import { DeadlineError, ModelHttpError, type AgentRole, type ModelCaller, type ModelRequest, type ModelResponse } from "@/server/agents/model";
 
 /**
@@ -357,7 +358,9 @@ export function groqModelCaller(deps: GroqCallerDeps = {}): ModelCaller | null {
           const daily = rate.remainingRequests === 0 && (rate.resetRequestsMs ?? 0) > 0;
           const wait = daily ? (rate.resetRequestsMs as number) : hint;
           gate.penalize(wait);
-          throw new ModelHttpError(429, wait, "groq", message.slice(0, 160));
+          // Which limit it was comes from Groq's own message ("... on tokens per minute (TPM) ..."); a day-long reset also means a daily limit.
+          const scope = limitScopeFromMessage(message) ?? (daily ? "rpd" : null);
+          throw new ModelHttpError(429, wait, "groq", message.slice(0, 160), scope);
         }
         if (res.status === 400) {
           const generation = failed !== null || /failed to generate|json_validate_failed|generate json|does not match|invalid json|completion tokens/i.test(message);

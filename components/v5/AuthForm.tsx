@@ -98,7 +98,7 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
             aria-describedby={`${ids.password}-hint`}
           />
           <p id={`${ids.password}-hint`} role={fieldErrors.password ? "alert" : undefined} className={`mt-1.5 text-xs ${fieldErrors.password ? "font-semibold text-v3-danger" : "text-v3-ink2"}`}>
-            {fieldErrors.password ?? (signup ? "At least 8 characters." : "Your password is checked by Supabase Auth and never stored by AgentDeal.")}
+            {fieldErrors.password ?? (signup ? "At least 8 characters." : "Your password is checked by Supabase Auth and never stored by Agent D.")}
           </p>
         </div>
         {error && <Notice tone="danger">{error}</Notice>}
@@ -115,7 +115,7 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
         </button>
       </form>
       <p className="mt-5 text-center text-sm text-v3-ink2">
-        {signup ? "Already have an account?" : "New to AgentDeal?"}{" "}
+        {signup ? "Already have an account?" : "New to Agent D?"}{" "}
         <Link href={`/${signup ? "login" : "signup"}${params.get("next") ? `?next=${encodeURIComponent(next)}` : ""}`} className="font-bold text-v3-primary-ink underline underline-offset-4">
           {signup ? "Sign in" : "Create an account"}
         </Link>
@@ -130,7 +130,7 @@ function Shell({ title, children }: { title: string; children: React.ReactNode }
     <div className="mx-auto w-full max-w-md px-4 py-14 sm:py-20">
       <title>{title}</title>
       <div className="v3-card p-6 sm:p-8">
-        <p className="v3-eyebrow">AgentDeal account</p>
+        <p className="v3-eyebrow">Agent D account</p>
         <h1 className="v3-h2 mb-6 mt-2 text-[2rem]">{title}</h1>
         {children}
       </div>

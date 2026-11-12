@@ -2,7 +2,7 @@
 
 import { useId } from "react";
 import type { ResponseMode } from "@/shared/contracts/types";
-import { MODE_LABEL, MODE_TAGLINE, fallbackReasonLabel } from "@/lib/v5/response-mode";
+import { MODE_LABEL, MODE_TAGLINE, fallbackReasonLabel, willUseText } from "@/lib/v5/response-mode";
 
 /**
  * Segmented pill switch: [ Server Responses | AI Responses ].
@@ -15,12 +15,15 @@ export function ResponseModeSwitch({
   onChange,
   aiAvailable,
   aiReason,
+  ai = null,
   disabled = false,
 }: {
   value: ResponseMode;
   onChange: (m: ResponseMode) => void;
   aiAvailable: boolean;
   aiReason?: string | null;
+  /** Provider and models "AI Agents" will use (from /api/config). */
+  ai?: { provider: string; buyer: string | null; seller: string | null } | null;
   disabled?: boolean;
 }) {
   const uid = useId();
@@ -70,6 +73,9 @@ export function ResponseModeSwitch({
           </div>
         ))}
       </dl>
+      <p data-testid="mode-will-use" className="mt-2 text-sm font-bold">
+        {willUseText(value, ai, aiAvailable)}
+      </p>
       <p className="mt-2 text-xs text-v3-ink2">This only changes how the stores reply. Your request analysis works the same in both modes.</p>
     </fieldset>
   );

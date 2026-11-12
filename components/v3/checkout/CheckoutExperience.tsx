@@ -94,7 +94,7 @@ function PayStep({
         <h1 ref={h1} tabIndex={-1} className="v3-display mt-3 text-[clamp(2.2rem,1.4rem+3.6vw,4rem)] outline-none">
           One more step: <span className="v3-hl">you</span> pay.
         </h1>
-        <p className="mt-4 max-w-xl text-[1.05rem] text-v3-ink2">You approved this offer with AgentDeal. Now you authorise the payment in PayPal. AgentDeal can&apos;t charge you without that second step.</p>
+        <p className="mt-4 max-w-xl text-[1.05rem] text-v3-ink2">You approved this offer with Agent D. Now you authorise the payment in PayPal. Agent D can&apos;t charge you without that second step.</p>
       </header>
 
       <div className="mt-10 grid gap-8 md:grid-cols-2 md:items-start">

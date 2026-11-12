@@ -57,8 +57,8 @@ describe("history view models", () => {
 
   it("flags an AI request that ran on server rules", () => {
     expect(modeLabel(toHistorySession(row))).toEqual({ tone: "warn", text: "AI requested · server fallback" });
-    expect(modeLabel(toHistorySession({ ...row, engine_mode: "multi_agent" })).text).toBe("AI Responses");
-    expect(modeLabel(toHistorySession({ ...row, response_mode: "server" })).text).toBe("Server Responses");
+    expect(modeLabel(toHistorySession({ ...row, engine_mode: "multi_agent" })).text).toBe("AI Agents");
+    expect(modeLabel(toHistorySession({ ...row, response_mode: "server" })).text).toBe("Server Rules");
   });
 
   it("reports paid only when a completed payment exists", () => {

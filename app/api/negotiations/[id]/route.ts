@@ -1,22 +1,16 @@
 import { apiError } from "@/server/http";
 import { ownerAllowed, withAuthCookies } from "@/server/auth/request";
-import { getSession, getPaymentsBySession, saveSession, withLock } from "@/server/db/store";
+import { getSession, getPaymentsBySession } from "@/server/db/store";
+import { recoverInterruptedNegotiation } from "@/server/agents/recover";
 import { isNegotiationStale, isSessionExpired } from "@/server/negotiation/service";
 
 export async function GET(req: Request, ctx: { params: Promise<{ id: string }> }) {
   const { id } = await ctx.params;
   let session = await getSession(id);
   if (session && isNegotiationStale(session)) {
-    // The run died without finishing: close it honestly instead of polling forever.
-    session = await withLock(`session:${id}`, async () => {
-      const fresh = await getSession(id);
-      if (fresh && isNegotiationStale(fresh)) {
-        fresh.status = "failed";
-        fresh.aiStatus = "failed";
-        await saveSession(fresh);
-      }
-      return fresh;
-    });
+    // The run died without finishing (e.g. the platform stopped the function). Its confirmed events stay; the negotiation is
+    // completed with server rules, labelled as such, or closed as failed when there is nothing honest to rank. Never polled forever.
+    session = await recoverInterruptedNegotiation(id);
   }
   if (!session) return apiError(404, "NOT_FOUND", "We couldn't find that negotiation.");
   const guard = await ownerAllowed(req, session.ownerId);

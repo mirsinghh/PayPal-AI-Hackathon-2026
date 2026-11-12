@@ -2,6 +2,7 @@ import { BaseLink } from "@/components/v3/BaseLink";
 import { AgentDPose } from "@/components/v3/mascot/AgentD";
 import { HeroScene } from "@/components/v3/home/HeroScene";
 import { Chip, btn } from "@/components/v3/ui";
+import { BRAND } from "@/shared/brand";
 import { IconArrow, IconBolt, IconCheck, IconLock, IconPlay, IconShield, IconTag, IconUser } from "@/components/v3/icons";
 
 /* ---------- Hero ---------- */
@@ -9,6 +10,7 @@ import { IconArrow, IconBolt, IconCheck, IconLock, IconPlay, IconShield, IconTag
 const PROMISES = [
   "Nothing is paid until you approve the exact offer.",
   "Four fictional demo stores: no real merchants, no real purchase.",
+  "Offers are compared only among those simulated stores, not the whole market.",
   "Payments run on PayPal Sandbox only.",
 ];
 
@@ -23,10 +25,13 @@ export function V5Hero() {
             <Chip tone="neutral">Demo stores · PayPal Sandbox</Chip>
           </div>
           <h1 id="hero-title" className="v3-display v3-rise mt-5 text-[clamp(2.9rem,1.9rem+5vw,5.4rem)]" style={{ ["--i" as string]: 1 }}>
-            Your AI agent negotiates. <span className="v3-hl">You decide.</span>
+            Agent D, it always gets you the <span className="v3-hl">best deal.</span>
           </h1>
           <p className="v3-rise mt-6 max-w-[36rem] text-[1.125rem] leading-relaxed text-v3-ink2 text-pretty" style={{ ["--i" as string]: 2 }}>
-            Describe what you want to buy. <strong className="text-v3-ink">Agent D</strong> analyses your request, negotiates with four demo-store agents that each play by their own commercial rules, and brings back competing offers to compare. Pick one and pay with PayPal Sandbox.
+            Describe what you want to buy. <strong className="text-v3-ink">Agent D</strong> analyses your request, negotiates with four demo-store agents that each play by their own commercial rules, and brings back competing offers to compare. You decide, then pay with PayPal Sandbox.
+          </p>
+          <p className="v3-rise mt-3 max-w-[36rem] text-sm text-v3-ink2" style={{ ["--i" as string]: 2 }}>
+            {BRAND.scope}
           </p>
           <div className="v3-rise mt-8 flex flex-wrap items-center gap-x-4 gap-y-3" style={{ ["--i" as string]: 3 }}>
             <BaseLink to="/brief" className={btn("primary", "lg")}>
@@ -59,7 +64,7 @@ export function V5Hero() {
 
 const STEPS = [
   { title: "Describe what you want", body: "A sentence and a budget: “wireless headphones under €300”. Add what matters most and any preferences." },
-  { title: "AgentDeal analyses your request", body: "It reads back what it understood, checks the budget and prepares the mission. Nothing is sent to a store yet." },
+  { title: "Agent D analyses your request", body: "It reads back what it understood, checks the budget and prepares the mission. Nothing is sent to a store yet." },
   { title: "Store agents negotiate", body: "Four demo stores, each with its own strategy and price floor, answer and counter. The server checks every price." },
   { title: "You compare the offers", body: "Prices, delivery, warranty and savings side by side, with a recommendation and the reasons behind it." },
   { title: "You choose and pay", body: "Approve one exact offer, then complete a PayPal Sandbox checkout. Your result lands in your history." },
@@ -151,7 +156,7 @@ const BENEFITS = [
 export function V5Benefits() {
   return (
     <section aria-labelledby="benefits-title" className="mx-auto w-full max-w-[1240px] px-4 pb-4 pt-20 sm:px-6 lg:px-8">
-      <p className="v3-eyebrow">Why AgentDeal</p>
+      <p className="v3-eyebrow">Why Agent D</p>
       <h2 id="benefits-title" className="v3-h2 mt-3 max-w-3xl text-[clamp(2rem,1.4rem+2.6vw,3.4rem)]">
         Better-informed deals, <span className="v3-hl">less work.</span>
       </h2>

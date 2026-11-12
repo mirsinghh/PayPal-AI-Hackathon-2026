@@ -1,6 +1,6 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
-import type { NegotiationSession, PaymentAttempt } from "@/shared/contracts/types";
+import type { NegotiationSession, PaymentAttempt, PaymentMethodAuth, PurchaseMandate } from "@/shared/contracts/types";
 import { LEGACY_PAYMENT_COLUMNS, LEGACY_SESSION_COLUMNS, paymentRow, sessionRow } from "./summary";
 
 /**
@@ -12,7 +12,8 @@ import { LEGACY_PAYMENT_COLUMNS, LEGACY_SESSION_COLUMNS, paymentRow, sessionRow 
 const ROOT = process.env.DATA_DIR || path.join(process.cwd(), ".data");
 const SAFE_ID = /^[A-Za-z0-9_-]{1,80}$/;
 
-function file(kind: "sessions" | "payments", id: string): string {
+type FileKind = "sessions" | "payments" | DocKind;
+function file(kind: FileKind, id: string): string {
   if (!SAFE_ID.test(id)) throw new Error("invalid_id");
   return path.join(ROOT, kind, `${id}.json`);
 }
@@ -52,7 +53,25 @@ type Backend = {
   savePayment(p: PaymentAttempt): Promise<void>;
   paymentsBySession(sessionId: string): Promise<PaymentAttempt[]>;
   paymentByOrderId(orderId: string): Promise<PaymentAttempt | null>;
+  /** V5 Auto-Buy documents (mandates, payment-method authorisations). */
+  getDoc<T>(kind: DocKind, id: string): Promise<T | null>;
+  saveDoc(kind: DocKind, doc: DocRow): Promise<void>;
+  listDocs<T>(kind: DocKind, ownerId: string): Promise<T[]>;
+  /** Atomic compare-and-set on `status`: writes `doc` only if the stored status is still `expected`. Returns whether it won. */
+  casDoc(kind: DocKind, expected: string, doc: DocRow): Promise<boolean>;
 };
+
+/** Kinds of V5 Auto-Buy documents. Each has its own table (supabase/schema.sql) or folder (.data/). */
+export type DocKind = "mandates" | "payment_methods";
+export interface DocRow {
+  id: string;
+  ownerId: string;
+  sessionId?: string | null;
+  status: string;
+  data: unknown;
+  updatedAt: string;
+}
+const TABLE: Record<DocKind, string> = { mandates: "purchase_mandates", payment_methods: "payment_methods" };
 
 const fileBackend: Backend = {
   async getSession(id) {
@@ -69,6 +88,35 @@ const fileBackend: Backend = {
   },
   async paymentByOrderId(orderId) {
     return (await listPayments()).find((p) => p.paypalOrderId === orderId) ?? null;
+  },
+  async getDoc<T>(kind: DocKind, id: string) {
+    const row = await readJson<DocRow>(file(kind, id));
+    return row ? (row.data as T) : null;
+  },
+  async saveDoc(kind, doc) {
+    await writeJson(file(kind, doc.id), doc);
+  },
+  async listDocs<T>(kind: DocKind, ownerId: string) {
+    // Literal folder names (not `kind`) so the bundler does not trace the whole project for this dynamic path.
+    const dir = kind === "mandates" ? path.join(ROOT, "mandates") : path.join(ROOT, "payment_methods");
+    let names: string[] = [];
+    try {
+      names = await fs.readdir(dir);
+    } catch (e) {
+      if ((e as NodeJS.ErrnoException).code === "ENOENT") return [];
+      throw e;
+    }
+    const rows = await Promise.all(names.filter((n) => n.endsWith(".json")).map((n) => readJson<DocRow>(path.join(dir, n))));
+    return rows.filter((r): r is DocRow => r !== null && r.ownerId === ownerId).map((r) => r.data as T);
+  },
+  async casDoc(kind, expected, doc) {
+    // One process: serialise read-check-write per document so two callers can never both win. (Supabase does this in SQL.)
+    return withLock(`cas:${kind}:${doc.id}`, async () => {
+      const current = await readJson<DocRow>(file(kind, doc.id));
+      if (!current || current.status !== expected) return false;
+      await writeJson(file(kind, doc.id), doc);
+      return true;
+    });
   },
 };
 
@@ -141,8 +189,28 @@ function supabaseBackend(url: string, key: string): Backend {
     async paymentByOrderId(orderId) {
       return (await selectData<PaymentAttempt>("payments", `paypal_order_id=eq.${enc(orderId)}&limit=1`))[0] ?? null;
     },
+    async getDoc<T>(kind: DocKind, id: string) {
+      return (await selectData<T>(TABLE[kind], `id=eq.${enc(id)}&limit=1`))[0] ?? null;
+    },
+    async saveDoc(kind, doc) {
+      await post(TABLE[kind], docRow(doc));
+    },
+    async listDocs<T>(kind: DocKind, ownerId: string) {
+      return selectData<T>(TABLE[kind], `user_id=eq.${enc(ownerId)}&order=updated_at.desc&limit=200`);
+    },
+    async casDoc(kind, expected, doc) {
+      // One conditional UPDATE: Postgres applies it atomically, so two instances can never both move the row out of `expected`.
+      const res = await sb(`/${TABLE[kind]}?id=eq.${enc(doc.id)}&status=eq.${enc(expected)}`, {
+        method: "PATCH",
+        headers: { prefer: "return=representation" },
+        body: JSON.stringify({ status: doc.status, data: doc.data, updated_at: doc.updatedAt }),
+      });
+      return ((await res.json()) as unknown[]).length === 1;
+    },
   };
 }
+
+const docRow = (d: DocRow): Record<string, unknown> => ({ id: d.id, user_id: d.ownerId, session_id: d.sessionId ?? null, status: d.status, data: d.data, updated_at: d.updatedAt });
 
 let backend: Backend | undefined;
 function db(): Backend {
@@ -175,6 +243,39 @@ export async function getPaymentsBySession(sessionId: string): Promise<PaymentAt
 
 export async function getPaymentByOrderId(orderId: string): Promise<PaymentAttempt | null> {
   return db().paymentByOrderId(orderId);
+}
+
+/* ---------- V5 Auto-Buy documents ---------- */
+
+const mandateDoc = (m: PurchaseMandate): DocRow => ({ id: m.mandateId, ownerId: m.ownerId, sessionId: m.sessionId, status: m.status, data: m, updatedAt: m.updatedAt });
+const methodDoc = (m: PaymentMethodAuth): DocRow => ({ id: m.methodId, ownerId: m.ownerId, status: m.status, data: m, updatedAt: m.updatedAt });
+
+export async function getMandate(id: string): Promise<PurchaseMandate | null> {
+  if (!SAFE_ID.test(id)) return null;
+  return db().getDoc<PurchaseMandate>("mandates", id);
+}
+export async function saveMandate(m: PurchaseMandate): Promise<void> {
+  if (!SAFE_ID.test(m.mandateId)) throw new Error("invalid_id");
+  await db().saveDoc("mandates", mandateDoc(m));
+}
+export async function listMandatesByOwner(ownerId: string): Promise<PurchaseMandate[]> {
+  return db().listDocs<PurchaseMandate>("mandates", ownerId);
+}
+/** Moves a mandate from `expected` to `next.status` only if nobody else did first. This is what makes "one purchase per mandate" hold across instances. */
+export async function casMandate(expected: PurchaseMandate["status"], next: PurchaseMandate): Promise<boolean> {
+  return db().casDoc("mandates", expected, mandateDoc(next));
+}
+
+export async function getPaymentMethod(id: string): Promise<PaymentMethodAuth | null> {
+  if (!SAFE_ID.test(id)) return null;
+  return db().getDoc<PaymentMethodAuth>("payment_methods", id);
+}
+export async function savePaymentMethod(m: PaymentMethodAuth): Promise<void> {
+  if (!SAFE_ID.test(m.methodId)) throw new Error("invalid_id");
+  await db().saveDoc("payment_methods", methodDoc(m));
+}
+export async function listPaymentMethodsByOwner(ownerId: string): Promise<PaymentMethodAuth[]> {
+  return db().listDocs<PaymentMethodAuth>("payment_methods", ownerId);
 }
 
 /** In-process mutex per key so a double-click cannot run two captures/creates at once. */

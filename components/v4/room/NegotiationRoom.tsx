@@ -3,7 +3,12 @@
 import { BaseLink } from "@/components/v3/BaseLink";
 import { modeBanner, modeChip } from "@/lib/v5/response-mode";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useSession } from "@/lib/api";
+import { useRouter } from "next/navigation";
+import { api, useSession } from "@/lib/api";
+import { useAppBase } from "@/lib/v3/base";
+import { AiUnavailableNotice, isTemporaryAiReason } from "@/components/v5/AiNotice";
+import { AUTO_FALLBACK_TEXT } from "@/server/ai/limits";
+import { turnSplit } from "@/lib/v5/response-mode";
 import { deriveDraft, deriveSellers, type SellerState } from "@/lib/negotiation-view";
 import { deliveryLabel, offerImage, offerName, warrantyLabel } from "@/lib/offer-view";
 import { AI_DEMO_NOTICE, formatEur } from "@/shared/format";
@@ -32,6 +37,7 @@ import { ReplayControls } from "@/components/v3/negotiation/ReplayControls";
 import { StoreDetail } from "@/components/v3/negotiation/StoreDetail";
 import { V4Conversation } from "@/components/v4/chat/V4Conversation";
 import { DecisionLab } from "@/components/v4/lab/DecisionLab";
+import { AutoBuyChip, AutoBuyRun } from "@/components/v5/autobuy/AutoBuyRun";
 
 const PRIORITY_LABEL = { lowest_price: "Lowest price", fast_delivery: "Fast delivery", best_value: "Best value" } as const;
 const ENGINE_STATES = ["thinking", "searching", "running", "offer_received", "counteroffer", "negotiating", "discount", "success", "reject", "idle"] as const;
@@ -107,6 +113,29 @@ function Room({ session }: { session: NegotiationSession }) {
   const { intent } = session;
   const banner = modeBanner(session);
   const chip = modeChip(session);
+  // AI problems: while a live run is switching to rules, one line; once finished, the full notice (what happened, when to retry, what to do).
+  const router = useRouter();
+  const base = useAppBase();
+  const [retrying, setRetrying] = useState(false);
+  const [retryError, setRetryError] = useState<string | null>(null);
+  const switching = live && !finished && visible.some((e) => e.type === "AGENT_FALLBACK");
+  const wroteByRules = (turnSplit(session)?.rules ?? 0) > 0;
+  const startedOnRules = session.responseMode === "ai" && session.mode !== "multi_agent" && isTemporaryAiReason(session.fallbackReason);
+  const aiNotice = finished && session.responseMode === "ai" && (wroteByRules || startedOnRules || session.agentRun?.recoveredWithRules === true);
+  const aiIssue = session.agentRun?.aiIssue ?? session.fallbackIssue ?? null;
+  async function tryAiAgain() {
+    if (retrying) return;
+    setRetrying(true);
+    setRetryError(null);
+    try {
+      // A fresh negotiation with the same request, on AI Agents. The finished one is never modified or re-run.
+      const res = await api<{ sessionId: string }>("/api/negotiations", { method: "POST", body: JSON.stringify({ ...session.intent, responseMode: "ai" }) });
+      router.push(`${base}/negotiation/${res.sessionId}`);
+    } catch (e) {
+      setRetryError((e as Error).message || "We couldn't start a new negotiation.");
+      setRetrying(false);
+    }
+  }
   const honesty = useMemo(() => engineHonesty(visible, session.agentRun?.provider ?? (session.agentRun?.model ? "gemini" : null)), [visible, session.agentRun]);
 
   // Who the room is about right now: the store Agent D is dealing with (the director's spot), unless you picked one.
@@ -149,6 +178,7 @@ function Room({ session }: { session: NegotiationSession }) {
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          {session.checkoutMode === "auto_buy" && <AutoBuyChip />}
           {chip && <Chip tone={chip.tone}>{chip.text}</Chip>}
           {live ? <Chip tone={honesty.level === "all_ai" || honesty.level === "mixed" ? "primary" : "warn"}>{honesty.label}</Chip> : <Chip tone="accent">Rule-based simulation · replay</Chip>}
         </div>
@@ -156,6 +186,11 @@ function Room({ session }: { session: NegotiationSession }) {
 
       <div className="mt-5 space-y-3">
         {banner && <Notice tone={banner.tone}>{banner.text}</Notice>}
+        {switching && <Notice tone="warn">{AUTO_FALLBACK_TEXT}</Notice>}
+        {aiNotice && (
+          <AiUnavailableNotice issue={aiIssue} reason={session.fallbackReason} onTryAgain={session.checkoutMode === "auto_buy" ? undefined : () => void tryAiAgain()} trying={retrying} />
+        )}
+        {retryError && <Notice tone="danger">{retryError}</Notice>}
         {live ? (
           <>
             <Notice tone="info">{AI_DEMO_NOTICE}</Notice>
@@ -216,7 +251,10 @@ function Room({ session }: { session: NegotiationSession }) {
             />
           )}
 
-          {done && winner && (
+          {/* Agent Auto-Buy: the pre-authorised purchase runs here. Manual Checkout keeps the review card below, unchanged. */}
+          {done && winner && session.checkoutMode === "auto_buy" && <AutoBuyRun session={session} />}
+
+          {done && winner && session.checkoutMode !== "auto_buy" && (
             <section aria-labelledby="v4-result" className="v3-card v3-pop flex flex-wrap items-center gap-5 border-v3-success-line bg-v3-success-soft p-5 sm:p-6">
               <ProductImage src={offerImage(winner)} alt={offerName(winner)} className="size-20 bg-v3-surface" sizes="80px" />
               <div className="min-w-0 flex-1">

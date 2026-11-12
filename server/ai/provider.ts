@@ -1,6 +1,9 @@
 import { geminiCaller, type LlmCaller } from "@/server/ai/explain";
 import { geminiModelCaller, type ModelCaller } from "@/server/agents/model";
 import { WIRE, groqConfig, groqModelCaller } from "@/server/ai/groq";
+import { isDailyScope } from "@/server/ai/limits";
+import { ModelHttpError, issueOf } from "@/server/agents/model";
+import { quotaBreakerInfo, tripQuotaBreaker } from "@/server/agents/config";
 
 /**
  * Which AI provider runs the agents. Chosen by configuration only: no UI component or commercial service knows it.
@@ -77,16 +80,43 @@ export function resolveEngine(env: Env = process.env): Engine {
   };
 }
 
-/** Explanation of a V0 (rule-based negotiation) recommendation, on the configured provider's explanation model. */
+/** How long the "why this offer" analysis may take before the labelled rules-based analysis is used instead. */
+const EXPLANATION_BUDGET_MS = 15_000;
+
+/**
+ * Explanation of a recommendation, on the configured provider's explanation model. If that provider is known to be limited,
+ * unavailable or rejecting our key, there is no caller: the analysis is the labelled "Rules-based analysis" at once, so
+ * starting a negotiation never waits on a provider that cannot answer. A provider-reported daily quota or bad credentials
+ * seen here also stop the negotiation engine from trying that provider.
+ */
 export function explanationCaller(env: Env = process.env): LlmCaller | null {
   const provider = analysisProvider(env);
   if (provider === "rules") return null;
-  if (provider === "gemini") return geminiCaller();
+  if (quotaBreakerInfo(provider)) return null;
+  if (provider === "gemini") {
+    const g = geminiCaller();
+    if (!g) return null;
+    return async (system, user) => {
+      try {
+        return await g(system, user);
+      } catch (e) {
+        if (/gemini_http_(401|403|404)/.test((e as Error).message)) tripQuotaBreaker(10 * 60_000, "gemini", Date.now(), { kind: "credentials", retryAfterMs: null, scope: null });
+        throw e;
+      }
+    };
+  }
   const call = groqModelCaller({ env });
   if (!call) return null;
   return async (system, user) => {
-    const r = await call({ system, history: [], user, maxOutputTokens: 800, role: "explanation", wire: WIRE.explanation });
-    return { text: r.text, model: r.model, provider: r.provider };
+    try {
+      const r = await call({ system, history: [], user, maxOutputTokens: 800, role: "explanation", wire: WIRE.explanation, deadlineAt: Date.now() + EXPLANATION_BUDGET_MS });
+      return { text: r.text, model: r.model, provider: r.provider };
+    } catch (e) {
+      const issue = issueOf(e);
+      if (e instanceof ModelHttpError && e.status === 429 && isDailyScope(e.scope)) tripQuotaBreaker(e.retryAfterMs ?? 15 * 60_000, "groq", Date.now(), issue);
+      else if (issue.kind === "credentials") tripQuotaBreaker(10 * 60_000, "groq", Date.now(), issue);
+      throw e;
+    }
   };
 }
 

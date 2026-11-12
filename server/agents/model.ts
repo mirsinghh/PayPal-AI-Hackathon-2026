@@ -1,5 +1,6 @@
 import { ZodError, type ZodType } from "zod";
 import { extractJson } from "@/server/ai/explain";
+import { classifyHttp, isDailyScope, limitScopeFromMessage, moreSevere, type AiIssue, type LimitScope } from "@/server/ai/limits";
 import { LIMITS, tripQuotaBreaker } from "./config";
 
 export interface Turn {
@@ -53,6 +54,8 @@ export class ModelHttpError extends Error {
     label = "gemini",
     /** Provider's own message (and failed output snippet), kept in rejection details. Never contains keys. */
     public detail: string | null = null,
+    /** For a 429: which limit it was (per minute / per day, requests / tokens), when the provider's message says. */
+    public scope: LimitScope | null = null,
   ) {
     super(`${label}_http_${status}`);
   }
@@ -129,11 +132,18 @@ export function geminiModelCaller(env: Record<string, string | undefined> = proc
     });
     if (!res.ok) {
       let retryAfterMs: number | null = null;
+      let scope: LimitScope | null = null;
       if (res.status === 429) {
-        const m = /retry in ([\d.]+)s/i.exec(await res.text().catch(() => ""));
+        const body = await res.text().catch(() => "");
+        const m = /retry in ([\d.]+)s/i.exec(body);
         if (m) retryAfterMs = Math.ceil(Number(m[1]) * 1000);
+        else {
+          const h = Number(res.headers.get("retry-after"));
+          if (Number.isFinite(h) && h > 0) retryAfterMs = Math.ceil(h * 1000);
+        }
+        scope = limitScopeFromMessage(body);
       }
-      throw new ModelHttpError(res.status, retryAfterMs);
+      throw new ModelHttpError(res.status, retryAfterMs, "gemini", null, scope);
     }
     const data = (await res.json()) as {
       candidates?: { content?: { parts?: { text?: string }[] } }[];
@@ -174,6 +184,16 @@ export class RunBudget {
   transportFailures = 0;
   limiter: RateLimiter | null = null;
   quotaExhausted = false;
+  /** Set when the provider rejected our credentials: nothing else will work this run. */
+  providerFailed = false;
+  /** The most actionable thing that went wrong with the provider (for the user-facing notice). Null = nothing did. */
+  issue: AiIssue | null = null;
+  noteIssue(i: AiIssue) {
+    const prev = this.issue;
+    this.issue = moreSevere(prev, i);
+    // Same kind seen again: keep the longest provider-reported wait.
+    if (prev && prev.kind === i.kind && this.issue.kind === i.kind) this.issue = { ...this.issue, retryAfterMs: Math.max(prev.retryAfterMs ?? 0, i.retryAfterMs ?? 0) || null };
+  }
   succeeded = 0;
   inputTokens = 0;
   outputTokens = 0;
@@ -192,6 +212,7 @@ export class RunBudget {
   /** Returns a stop reason, or null when another call is allowed. */
   stopReason(reserve = 0): "call_cap" | "deadline" | "model_unavailable" | "quota_exhausted" | null {
     if (this.quotaExhausted) return "quota_exhausted";
+    if (this.providerFailed) return "model_unavailable";
     // `reserve` keeps the last calls for the final decision: earlier turns stop `reserve` calls before the cap.
     if (this.attempted - this.transportFailures >= this.maxCalls - reserve) return "call_cap";
     if (this.transportFailures >= LIMITS.maxTransportFailures) return "model_unavailable";
@@ -239,7 +260,7 @@ export class Agent {
 
 export type AskResult<T> =
   | { ok: true; value: T; model: string; provider: string | null; latencyMs: number; attempts: number; rejections: string[]; details: string[] }
-  | { ok: false; reason: string; attempts: number; rejections: string[]; details: string[] };
+  | { ok: false; reason: string; attempts: number; rejections: string[]; details: string[]; /** What went wrong with the provider, when it was a provider problem. */ issue?: AiIssue };
 
 export interface AskOptions {
   wire?: WireSchema;
@@ -313,6 +334,7 @@ export async function ask<T>(
         return { ok: true, value, model: out.model, provider: out.provider ?? null, latencyMs: Date.now() - t0, attempts, rejections, details };
       }
       budget.recordFailure(agent.role, null);
+      budget.noteIssue({ kind: /generation failed|groq_400/i.test(`${out.note ?? ""} ${detail}`) ? "structured_failed" : "invalid_response", retryAfterMs: null, scope: null });
       rejections.push(problem ?? "invalid");
       details.push(detail || (problem ?? "invalid"));
       scratch.push({ role: "user", text: user }, { role: "model", text: out.text });
@@ -329,22 +351,49 @@ export async function ask<T>(
       budget.recordFailure(agent.role, e instanceof ModelHttpError ? e.status : null);
       rejections.push(`call_failed:${(e as Error).message.slice(0, 60)}`);
       details.push(e instanceof ModelHttpError && e.detail ? e.detail : (e as Error).message.slice(0, 60));
-      if (!retryable(e)) return { ok: false, reason: "call_failed", attempts, rejections, details };
+      const issue = issueOf(e);
+      budget.noteIssue(issue);
+      if (e instanceof ModelHttpError) {
+        // A daily quota cannot be waited out and retrying only burns time: stop the run now and remember it (per provider).
+        if (e.status === 429 && isDailyScope(e.scope)) {
+          budget.quotaExhausted = true;
+          tripQuotaBreaker(e.retryAfterMs ?? DAILY_DEFAULT_BREAKER_MS, providerKeyOf(e), Date.now(), issue);
+          return { ok: false, reason: "quota_exhausted", attempts, rejections, details, issue };
+        }
+        // Rejected credentials / no access to the model: nothing else will work this run, and the next ones should not try.
+        if (issue.kind === "credentials") {
+          budget.providerFailed = true;
+          tripQuotaBreaker(CREDENTIALS_BREAKER_MS, providerKeyOf(e), Date.now(), issue);
+          return { ok: false, reason: "call_failed", attempts, rejections, details, issue };
+        }
+      }
+      if (!retryable(e)) return { ok: false, reason: "call_failed", attempts, rejections, details, issue };
       // Honour the provider's retry hint, but never wait past the run deadline.
       const wait = e instanceof ModelHttpError && e.retryAfterMs ? e.retryAfterMs + 250 : 250;
       if (Date.now() + wait > budget.deadlineAt) {
-        // A long 429 (e.g. daily quota) cannot be waited out: stop the whole run and trip the breaker (per provider).
+        // A long 429 cannot be waited out: stop the whole run and trip the breaker (per provider).
         if (e instanceof ModelHttpError && e.status === 429 && e.retryAfterMs) {
           budget.quotaExhausted = true;
-          tripQuotaBreaker(e.retryAfterMs, providerKeyOf(e));
-          return { ok: false, reason: "quota_exhausted", attempts, rejections, details };
+          tripQuotaBreaker(e.retryAfterMs, providerKeyOf(e), Date.now(), issue);
+          return { ok: false, reason: "quota_exhausted", attempts, rejections, details, issue };
         }
-        return { ok: false, reason: "deadline", attempts, rejections, details };
+        return { ok: false, reason: "deadline", attempts, rejections, details, issue };
       }
       await new Promise((r) => setTimeout(r, wait));
     }
   }
-  return { ok: false, reason: rejections.at(-1)?.startsWith("call_failed") ? "call_failed" : "invalid_output", attempts, rejections, details };
+  return { ok: false, reason: rejections.at(-1)?.startsWith("call_failed") ? "call_failed" : "invalid_output", attempts, rejections, details, ...(budget.issue ? { issue: budget.issue } : {}) };
+}
+
+/** Internal guesses used ONLY to stop calling a provider for a while. They are never shown to the user as a recovery time. */
+const DAILY_DEFAULT_BREAKER_MS = 15 * 60_000;
+const CREDENTIALS_BREAKER_MS = 10 * 60_000;
+
+/** What kind of provider problem an exception is. `retryAfterMs` is only what the provider reported. */
+export function issueOf(e: unknown): AiIssue {
+  if (e instanceof ModelHttpError) return { kind: classifyHttp(e.status, e.scope, e.detail ?? ""), retryAfterMs: e.retryAfterMs, scope: e.scope };
+  const m = e instanceof Error ? e.message : "";
+  return { kind: /timeout|abort/i.test(m) ? "timeout" : "unavailable", retryAfterMs: null, scope: null };
 }
 
 /** Which provider a 429 came from (the error message is `<provider>_http_<status>`). */

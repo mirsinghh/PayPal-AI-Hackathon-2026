@@ -1,3 +1,5 @@
+import type { AiIssue } from "@/server/ai/limits";
+
 /**
  * Feature flag and hard limits for the multi-agent negotiation (phase 2).
  * With the flag off (default) the deterministic V0 runs exactly as before.
@@ -31,9 +33,17 @@ export function maxModelCalls(): number {
   return Number.isInteger(n) && n >= 8 && n <= 40 ? n : LIMITS.maxModelCalls;
 }
 
+/**
+ * Longest wall-clock budget a run may have on Vercel. The route (app/api/negotiations/route.ts) has maxDuration = 60 s and
+ * the run continues inside after(), so a larger value would let the platform kill the run mid-negotiation. Local runs and
+ * other hosts keep the full range.
+ */
+export const VERCEL_MAX_DEADLINE_MS = 40_000;
+
 export function deadlineMs(): number {
   const n = Number(process.env.MULTI_AGENT_DEADLINE_MS);
-  return Number.isFinite(n) && n >= 5_000 && n <= 600_000 ? n : LIMITS.deadlineMs;
+  const v = Number.isFinite(n) && n >= 5_000 && n <= 600_000 ? n : LIMITS.deadlineMs;
+  return process.env.VERCEL ? Math.min(v, VERCEL_MAX_DEADLINE_MS) : v;
 }
 
 /** Model requests per minute the provider plan allows (Gemini free tier: 5). 0 disables client-side pacing. */
@@ -55,12 +65,19 @@ export function multiAgentEnabled(): boolean {
  * runs skip straight to the labelled V0 fallback instead of burning attempts and user time. A breaker on one provider
  * never switches the run to another one: that would spend a different quota without being asked.
  */
-const quotaUntil = new Map<string, number>();
-export function tripQuotaBreaker(retryAfterMs: number, provider = "gemini", now = Date.now()) {
-  quotaUntil.set(provider, Math.max(quotaUntil.get(provider) ?? 0, now + retryAfterMs));
+const quotaUntil = new Map<string, { until: number; issue: AiIssue | null }>();
+/** `issue` records why (rate limit, daily quota, credentials, outage) so the UI can word it honestly. */
+export function tripQuotaBreaker(retryAfterMs: number, provider = "gemini", now = Date.now(), issue: AiIssue | null = null) {
+  const prev = quotaUntil.get(provider);
+  quotaUntil.set(provider, { until: Math.max(prev?.until ?? 0, now + retryAfterMs), issue: issue ?? prev?.issue ?? null });
 }
 export function quotaBreakerOpen(provider = "gemini", now = Date.now()): boolean {
-  return now < (quotaUntil.get(provider) ?? 0);
+  return now < (quotaUntil.get(provider)?.until ?? 0);
+}
+/** Why the breaker is open and for how long it will stay so (the duration is ours; only the issue's own retryAfterMs is the provider's). */
+export function quotaBreakerInfo(provider = "gemini", now = Date.now()): { remainingMs: number; issue: AiIssue | null } | null {
+  const b = quotaUntil.get(provider);
+  return b && now < b.until ? { remainingMs: b.until - now, issue: b.issue } : null;
 }
 
 let runTimes: number[] = [];

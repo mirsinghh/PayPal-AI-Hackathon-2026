@@ -22,4 +22,4 @@ export const DEMO_NOTICE =
 
 /** Shown whenever the agents are real AI: be explicit about what is real and what is demo. */
 export const AI_DEMO_NOTICE =
-  "The buyer and seller agents are real AI (Google Gemini). The stores, inventory and offers belong to a demo environment; no real purchase happens and payments use PayPal Sandbox.";
+  "The buyer and seller agents are real AI models. The stores, inventory and offers belong to a demo environment; no real purchase happens and payments use PayPal Sandbox.";

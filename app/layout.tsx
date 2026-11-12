@@ -5,13 +5,17 @@ import "./globals.css";
 import { AuthProvider } from "@/components/v5/AuthProvider";
 import { V5Footer } from "@/components/v5/Footer";
 import { V5Header, V5HeaderFallback } from "@/components/v5/Header";
+import { BRAND } from "@/shared/brand";
 
 const display = Bricolage_Grotesque({ subsets: ["latin"], variable: "--nf-v3-display", display: "swap", axes: ["opsz"] });
 const sans = Figtree({ subsets: ["latin"], variable: "--nf-v3-sans", display: "swap" });
 
 export const metadata: Metadata = {
-  title: { default: "AgentDeal · Your AI agent negotiates. You decide.", template: "%s · AgentDeal" },
-  description: "Tell Agent D what you want to buy. Four demo stores negotiate, you compare the offers and pay with PayPal Sandbox. Choose server rules or real AI for the replies.",
+  applicationName: BRAND.name,
+  title: { default: BRAND.tagline, template: `%s · ${BRAND.name}` },
+  description: BRAND.description,
+  openGraph: { type: "website", siteName: BRAND.name, title: BRAND.tagline, description: BRAND.description, locale: "en_US" },
+  twitter: { card: "summary", title: BRAND.tagline, description: BRAND.description },
 };
 
 export const viewport: Viewport = { themeColor: "#fbfaf6", width: "device-width", initialScale: 1 };

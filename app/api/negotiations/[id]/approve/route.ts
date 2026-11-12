@@ -17,6 +17,8 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
     const guard = await ownerAllowed(req, session.ownerId);
     if (!guard.ok) return guard.res;
     if (isSessionExpired(session)) return apiError(410, "SESSION_EXPIRED", "Your demo session has expired.");
+    // Auto-Buy negotiations are approved only by the server inside the user's mandate, never by this endpoint.
+    if (session.checkoutMode === "auto_buy") return apiError(409, "CHECKOUT_MODE_MISMATCH", "This negotiation is set to Agent Auto-Buy.");
 
     if (session.status !== "ready" && session.status !== "completed") {
       return apiError(409, "NEGOTIATION_NOT_READY", "The negotiation hasn't finished yet.");

@@ -68,6 +68,8 @@ export async function createPaymentOrder(
     const session = await getSession(sessionId);
     if (!session) throw new PaymentError(404, "NOT_FOUND", "We couldn't find that negotiation.");
     if (isSessionExpired(session)) throw new PaymentError(410, "SESSION_EXPIRED", "Your demo session has expired.");
+    // Auto-Buy negotiations are paid only through their mandate (payWithVault), never through the manual button.
+    if (session.checkoutMode === "auto_buy") throw new PaymentError(409, "CHECKOUT_MODE_MISMATCH", "This negotiation is set to Agent Auto-Buy.");
     if (!session.approvedOfferId) {
       throw new PaymentError(403, "NOT_APPROVED", "Approve the deal before paying.");
     }
@@ -156,6 +158,7 @@ export async function captureOrder(orderId: string, gw: Gateway = realGateway): 
     let attempt = await getPaymentByOrderId(orderId);
     if (!attempt) throw new PaymentError(404, "NOT_FOUND", "Unknown payment.");
     if (attempt.status === "completed") return toPublic(attempt);
+    if (attempt.checkoutMode === "auto_buy") throw new PaymentError(409, "CHECKOUT_MODE_MISMATCH", "This payment is handled by Agent Auto-Buy.");
 
     const siblings = await getPaymentsBySession(attempt.sessionId);
     if (siblings.some((s) => s.status === "completed" && s.paymentAttemptId !== attempt!.paymentAttemptId)) {
@@ -220,4 +223,131 @@ export async function getPaymentStatus(orderId: string, gw: Gateway = realGatewa
       throw new PaymentError(502, "PAYPAL_UNCONFIRMED", "We couldn't confirm the payment yet.", true);
     }
   });
+}
+
+/* ---------- V5 Auto-Buy: the same validators and idempotency, charging a vaulted PayPal method the buyer authorised earlier ---------- */
+
+export type VaultedOutcome =
+  | { kind: "completed"; payment: PublicPayment }
+  /** PayPal refused, or needs the buyer. Nothing was charged. `payerAction` = PayPal wants an interaction we must not fake. */
+  | { kind: "failed"; code: string; payment: PublicPayment | null; payerAction: boolean }
+  /** The outcome on PayPal's side is unknown: never declared paid or failed, only reconciled. */
+  | { kind: "uncertain"; payment: PublicPayment | null };
+
+/**
+ * Creates (once) and verifies the Sandbox payment for a mandate. The amount comes only from the stored offer; the order
+ * is created with the buyer's vaulted token; the capture is verified exactly like a manual one (status, currency,
+ * amount, custom_id). A second call for the same mandate never creates a second order: it resumes the first.
+ */
+export async function payWithVault(
+  args: { sessionId: string; offerId: string; mandateId: string; vaultId: string },
+  gw: Gateway = realGateway,
+): Promise<VaultedOutcome> {
+  return withLock(`pay:${args.sessionId}`, async () => {
+    const session = await getSession(args.sessionId);
+    if (!session) throw new PaymentError(404, "NOT_FOUND", "We couldn't find that negotiation.");
+    if (isSessionExpired(session)) throw new PaymentError(410, "SESSION_EXPIRED", "Your demo session has expired.");
+    if (session.checkoutMode !== "auto_buy" || session.mandateId !== args.mandateId) {
+      throw new PaymentError(409, "CHECKOUT_MODE_MISMATCH", "This negotiation is not set to Agent Auto-Buy.");
+    }
+    if (session.approvedBy !== "mandate" || session.approvedOfferId !== args.offerId) {
+      throw new PaymentError(403, "NOT_APPROVED", "The mandate has not approved this offer.");
+    }
+    const offer = session.offers.find((o) => o.offerId === args.offerId);
+    if (!offer || !offer.eligible || offer.offerId !== session.recommendedOfferId) {
+      throw new PaymentError(422, "OFFER_INELIGIBLE", "This offer isn't eligible.");
+    }
+
+    const attempts = await getPaymentsBySession(args.sessionId);
+    const mine = attempts.find((a) => a.mandateId === args.mandateId);
+    if (attempts.some((a) => a.status === "completed" && a.paymentAttemptId !== mine?.paymentAttemptId)) {
+      throw new PaymentError(409, "PAYPAL_ALREADY_CAPTURED", "This Sandbox payment is already complete.");
+    }
+    if (mine) return resumeVaulted(mine, args.vaultId, offer.productLabel, gw);
+
+    if (isOfferExpired(session, offer.offerId)) throw new PaymentError(410, "OFFER_EXPIRED", "This demo offer has expired.");
+
+    const now = new Date().toISOString();
+    const attempt: PaymentAttempt = {
+      paymentAttemptId: `pay_${randomUUID()}`,
+      sessionId: args.sessionId,
+      offerId: offer.offerId,
+      amountCents: offer.finalPriceCents,
+      currency: "EUR",
+      status: "creating",
+      paypalOrderId: null,
+      paypalCaptureId: null,
+      createRequestId: randomUUID(),
+      captureRequestId: randomUUID(),
+      createdAt: now,
+      updatedAt: now,
+      failureCode: null,
+      ownerId: session.ownerId ?? null,
+      checkoutMode: "auto_buy",
+      mandateId: args.mandateId,
+    };
+    // Saved BEFORE calling PayPal: if anything below dies, a retry finds this record instead of creating a second order.
+    await savePayment(attempt);
+    return createAndSettle(attempt, args.vaultId, offer.productLabel, gw);
+  });
+}
+
+async function createAndSettle(attempt: PaymentAttempt, vaultId: string, label: string, gw: Gateway): Promise<VaultedOutcome> {
+  let order: PayPalOrder;
+  try {
+    order = await gw.create({
+      amountCents: attempt.amountCents,
+      description: `AgentDeal Sandbox Auto-Buy: ${label}`,
+      customId: attempt.paymentAttemptId,
+      // Same PayPal-Request-Id on every retry: PayPal returns the original order instead of creating another.
+      requestId: attempt.createRequestId,
+      vaultId,
+    });
+  } catch (e) {
+    if (e instanceof PayPalHttpError) {
+      const failed = await update(attempt, { status: "failed", failureCode: errCode(e) });
+      return { kind: "failed", code: failed.failureCode ?? "PAYPAL_FAILED", payment: toPublic(failed), payerAction: e.issue === "PAYER_ACTION_REQUIRED" };
+    }
+    const unknown = await update(attempt, { status: "unknown_pending_reconciliation", failureCode: errCode(e) });
+    return { kind: "uncertain", payment: toPublic(unknown) };
+  }
+  attempt = await update(attempt, { paypalOrderId: order.id, status: "approval_pending" });
+  return settleVaultedOrder(attempt, order, gw);
+}
+
+async function settleVaultedOrder(attempt: PaymentAttempt, order: PayPalOrder, gw: Gateway): Promise<VaultedOutcome> {
+  if (order.status === "PAYER_ACTION_REQUIRED") {
+    // PayPal wants the buyer present (e.g. a fresh authentication). We never fake that interaction: stop.
+    const failed = await update(attempt, { status: "failed", failureCode: "PAYER_ACTION_REQUIRED" });
+    return { kind: "failed", code: "PAYER_ACTION_REQUIRED", payment: toPublic(failed), payerAction: true };
+  }
+  let current = order;
+  if (order.status === "APPROVED") {
+    attempt = await update(attempt, { status: "capturing" });
+    try {
+      current = await gw.capture(order.id, attempt.captureRequestId);
+    } catch (e) {
+      if (e instanceof PayPalHttpError && e.issue !== "ORDER_ALREADY_CAPTURED") {
+        const failed = await update(attempt, { status: "failed", failureCode: errCode(e) });
+        return { kind: "failed", code: failed.failureCode ?? "PAYPAL_FAILED", payment: toPublic(failed), payerAction: e.issue === "PAYER_ACTION_REQUIRED" };
+      }
+      const unknown = await update(attempt, { status: "unknown_pending_reconciliation", failureCode: errCode(e) });
+      return { kind: "uncertain", payment: toPublic(unknown) };
+    }
+  }
+  const settled = await settle(attempt, current);
+  if (settled?.status === "completed") return { kind: "completed", payment: toPublic(settled) };
+  const unknown = settled ?? (await update(attempt, { status: "unknown_pending_reconciliation", failureCode: `STATUS_${current.status}` }));
+  return { kind: "uncertain", payment: toPublic(unknown) };
+}
+
+async function resumeVaulted(attempt: PaymentAttempt, vaultId: string, label: string, gw: Gateway): Promise<VaultedOutcome> {
+  if (attempt.status === "completed") return { kind: "completed", payment: toPublic(attempt) };
+  if (attempt.status === "failed") return { kind: "failed", code: attempt.failureCode ?? "PAYPAL_FAILED", payment: toPublic(attempt), payerAction: attempt.failureCode === "PAYER_ACTION_REQUIRED" };
+  if (!attempt.paypalOrderId) return createAndSettle(attempt, vaultId, label, gw);
+  try {
+    return await settleVaultedOrder(attempt, await gw.get(attempt.paypalOrderId), gw);
+  } catch {
+    return { kind: "uncertain", payment: toPublic(attempt) };
+  }
 }

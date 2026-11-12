@@ -72,7 +72,7 @@ export function ApprovalCard({
         ) : state === "approved" ? (
           <>
             <Notice tone="success" title="Approved. You haven’t paid yet.">
-              You approved exactly this offer. Next you authorise the payment in PayPal Sandbox; AgentDeal can’t charge you without that second step.
+              You approved exactly this offer. Next you authorise the payment in PayPal Sandbox; Agent D can’t charge you without that second step.
             </Notice>
             {redirecting && (
               <p role="status" className="flex items-center gap-2 rounded-v3-md bg-v3-soft px-3 py-2 text-sm font-bold">
