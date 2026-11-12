@@ -11,13 +11,13 @@ export function V5Footer() {
           {DEMO_NOTICE} Agent D is an original mascot; the four stores and their characters are fictional and not affiliated with any real company. Built for the PayPal AI Hackathon.
         </p>
         <nav aria-label="Footer" className="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm font-semibold">
-          <Link href="/v5" className={link}>
+          <Link href="/" className={link}>
             Home
           </Link>
-          <Link href="/v5/brief" className={link}>
+          <Link href="/brief" className={link}>
             New negotiation
           </Link>
-          <Link href="/v5/activity" className={link}>
+          <Link href="/activity" className={link}>
             This browser&apos;s activity
           </Link>
         </nav>

@@ -3,11 +3,11 @@
 import { createContext, useContext, type ReactNode } from "react";
 
 /**
- * Where the UI is mounted. V3 lives at /v3 (the default, so V3 behaves exactly as before); V4 reuses unchanged V3
- * screens (brief, checkout, activity) under /v4 by providing "/v4" here, so their internal links stay inside V4.
+ * Where the UI is mounted. The app lives at the site root, so the default is "" and every screen links with
+ * `${base}/path`. The provider remains so the shared screens (brief, checkout, activity) stay mount-point agnostic.
  */
-export type AppBase = "/v3" | "/v4" | "/v5";
-const BaseContext = createContext<AppBase>("/v3");
+export type AppBase = string;
+const BaseContext = createContext<AppBase>("");
 
 export function AppBaseProvider({ base, children }: { base: AppBase; children: ReactNode }) {
   return <BaseContext.Provider value={base}>{children}</BaseContext.Provider>;

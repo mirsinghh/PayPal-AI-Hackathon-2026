@@ -8,8 +8,6 @@ import { btn } from "@/components/v3/ui";
 import { IconArrow } from "@/components/v3/icons";
 import { useAuth } from "./AuthProvider";
 
-const BASE = "/v5";
-
 export function V5HeaderFallback() {
   return <div aria-hidden className="h-[72px] border-b border-v3-line" />;
 }
@@ -22,7 +20,7 @@ export function V5Header() {
   const router = useRouter();
   const { user, accounts, status, signOut } = useAuth();
   const menu = useRef<HTMLDetailsElement>(null);
-  const rel = path.startsWith(BASE) ? path.slice(BASE.length) || "/" : path;
+  const rel = path;
   const flowIndex = FLOW.findIndex((s) => rel === s.path || rel.startsWith(`${s.path}/`));
 
   useEffect(() => {
@@ -39,7 +37,7 @@ export function V5Header() {
 
   async function onSignOut() {
     await signOut();
-    router.push(BASE);
+    router.push("/");
     router.refresh();
   }
 
@@ -47,7 +45,7 @@ export function V5Header() {
     <span aria-hidden className="h-10 w-24 animate-pulse rounded-v3-md bg-v3-sunken" />
   ) : user ? (
     <div className="flex items-center gap-2">
-      <Link href={`${BASE}/profile`} className="hidden max-w-[11rem] truncate rounded-full bg-v3-soft px-3 py-1.5 text-sm font-bold text-v3-ink lg:block" title={user.email}>
+      <Link href="/profile" className="hidden max-w-[11rem] truncate rounded-full bg-v3-soft px-3 py-1.5 text-sm font-bold text-v3-ink xl:block" title={user.email}>
         {user.email}
       </Link>
       <button type="button" onClick={onSignOut} className={btn("secondary", "sm")}>
@@ -55,7 +53,7 @@ export function V5Header() {
       </button>
     </div>
   ) : (
-    <Link href={`${BASE}/login`} className={btn("secondary", "sm")}>
+    <Link href="/login" className={btn("secondary", "sm")}>
       Sign in
     </Link>
   );
@@ -63,14 +61,14 @@ export function V5Header() {
   return (
     <header className="sticky top-0 z-40 border-b border-v3-line bg-v3-bg/90 backdrop-blur supports-[backdrop-filter]:bg-v3-bg/80">
       <div className="mx-auto flex min-h-[72px] w-full max-w-[1240px] items-center justify-between gap-3 px-4 sm:px-6 lg:px-8">
-        <Logo base={BASE} />
+        <Logo />
         {flowIndex >= 0 ? (
           <div className="min-w-0 flex-1 px-2 lg:flex lg:justify-center">
             <FlowProgress index={flowIndex} />
           </div>
         ) : (
           <nav aria-label="Main" className="hidden items-center gap-1 lg:flex">
-            {path === BASE &&
+            {path === "/" &&
               [
                 ["#how", "How it works"],
                 ["#demo", "Live demo"],
@@ -81,7 +79,7 @@ export function V5Header() {
                 </a>
               ))}
             {items.map((i) => (
-              <Link key={i.to} href={`${BASE}${i.to === "/" ? "" : i.to}`} aria-current={current(i.to) ? "page" : undefined} className={linkCls}>
+              <Link key={i.to} href={i.to} aria-current={current(i.to) ? "page" : undefined} className={linkCls}>
                 {i.label}
               </Link>
             ))}
@@ -90,8 +88,8 @@ export function V5Header() {
         <div className="flex items-center gap-2">
           {flowIndex < 0 && (
             // The .v3-btn class is unlayered CSS and would beat Tailwind's `hidden`, so hide a wrapper instead.
-            <span className="hidden sm:block">
-              <Link href={`${BASE}/brief`} className={btn("primary", "sm")}>
+            <span className="hidden sm:block lg:hidden xl:block">
+              <Link href="/brief" className={btn("primary", "sm")}>
                 Start negotiating <IconArrow size={16} />
               </Link>
             </span>
@@ -107,7 +105,7 @@ export function V5Header() {
               <ul className="space-y-0.5">
                 {items.map((i) => (
                   <li key={i.to}>
-                    <Link href={`${BASE}${i.to === "/" ? "" : i.to}`} className={`${linkCls} block min-h-11`} aria-current={current(i.to) ? "page" : undefined}>
+                    <Link href={i.to} className={`${linkCls} block min-h-11`} aria-current={current(i.to) ? "page" : undefined}>
                       {i.label}
                     </Link>
                   </li>

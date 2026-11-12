@@ -7,8 +7,8 @@ import { api, ApiFailure } from "@/lib/api";
 import { Notice, Spinner, btn } from "@/components/v3/ui";
 import { useAuth } from "./AuthProvider";
 
-/** Only same-site /v5 paths are honoured after signing in (no open redirects). */
-export const safeNext = (n: string | null): string => (n && /^\/v5(\/[A-Za-z0-9_\-./?=&]*)?$/.test(n) && !n.includes("//") ? n : "/v5/profile");
+/** Only same-site paths are honoured after signing in (no open redirects). */
+export const safeNext = (n: string | null): string => (n && /^\/(?!\/)[A-Za-z0-9_\-./?=&]*$/.test(n) && !n.includes("//") && !n.startsWith("/api") ? n : "/profile");
 
 export function AuthForm({ mode }: { mode: "login" | "signup" }) {
   const router = useRouter();
@@ -52,7 +52,7 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
     return (
       <Shell title="Accounts are not enabled here">
         <Notice tone="info">This deployment runs without accounts. You can still negotiate and pay with PayPal Sandbox; your activity is kept in this browser only.</Notice>
-        <Link href="/v5/brief" className={btn("primary", "lg", "mt-5 w-full")}>
+        <Link href="/brief" className={btn("primary", "lg", "mt-5 w-full")}>
           Start negotiating
         </Link>
       </Shell>
@@ -62,7 +62,7 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
     return (
       <Shell title="Check your inbox">
         <Notice tone="success">Your account was created. Confirm your email address from the message we sent, then sign in.</Notice>
-        <Link href="/v5/login" className={btn("primary", "lg", "mt-5 w-full")}>
+        <Link href="/login" className={btn("primary", "lg", "mt-5 w-full")}>
           Go to sign in
         </Link>
       </Shell>
@@ -116,7 +116,7 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
       </form>
       <p className="mt-5 text-center text-sm text-v3-ink2">
         {signup ? "Already have an account?" : "New to AgentDeal?"}{" "}
-        <Link href={`/v5/${signup ? "login" : "signup"}${params.get("next") ? `?next=${encodeURIComponent(next)}` : ""}`} className="font-bold text-v3-primary-ink underline underline-offset-4">
+        <Link href={`/${signup ? "login" : "signup"}${params.get("next") ? `?next=${encodeURIComponent(next)}` : ""}`} className="font-bold text-v3-primary-ink underline underline-offset-4">
           {signup ? "Sign in" : "Create an account"}
         </Link>
       </p>

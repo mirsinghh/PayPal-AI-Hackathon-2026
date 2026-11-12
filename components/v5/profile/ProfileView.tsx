@@ -40,8 +40,8 @@ function ProfileBody({ email, createdAt }: { email: string; createdAt: string | 
           </div>
         </div>
         <div className="flex flex-wrap gap-2.5">
-          <Link href="/v5/brief" className={btn("primary", "md")}>New negotiation</Link>
-          <button type="button" className={btn("secondary", "md")} onClick={() => void signOut().then(() => router.push("/v5"))}>
+          <Link href="/brief" className={btn("primary", "md")}>New negotiation</Link>
+          <button type="button" className={btn("secondary", "md")} onClick={() => void signOut().then(() => router.push("/"))}>
             Sign out
           </button>
         </div>
@@ -54,7 +54,7 @@ function ProfileBody({ email, createdAt }: { email: string; createdAt: string | 
             <section aria-labelledby="recent-title" className="mt-10">
               <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
                 <h2 id="recent-title" className="v3-h2 text-[1.6rem]">Latest negotiations</h2>
-                <Link href="/v5/history" className={btn("ghost", "sm")}>See all history</Link>
+                <Link href="/history" className={btn("ghost", "sm")}>See all history</Link>
               </div>
               <HistoryList data={state.data} facet="negotiations" limit={3} />
             </section>

@@ -36,11 +36,11 @@ describe("response mode wording", () => {
 });
 
 describe("sign-in redirect", () => {
-  it("only allows same-site /v5 paths", () => {
-    expect(safeNext("/v5/profile")).toBe("/v5/profile");
-    expect(safeNext("/v5/deals/ses_abc")).toBe("/v5/deals/ses_abc");
-    for (const bad of ["https://evil.example", "//evil.example", "/v5//evil.example", "/other", "javascript:alert(1)", null, ""]) {
-      expect(safeNext(bad)).toBe("/v5/profile");
+  it("only allows same-site paths", () => {
+    expect(safeNext("/profile")).toBe("/profile");
+    expect(safeNext("/deals/ses_abc")).toBe("/deals/ses_abc");
+    for (const bad of ["https://evil.example", "//evil.example", "/deals//evil.example", "/api/auth/logout", "javascript:alert(1)", null, ""]) {
+      expect(safeNext(bad)).toBe("/profile");
     }
   });
 });

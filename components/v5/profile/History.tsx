@@ -42,8 +42,8 @@ export function MemberGate({ children }: { children: (user: SessionUser) => Reac
           <p className="font-v3-head text-2xl font-extrabold">Accounts are not enabled on this deployment.</p>
           <p className="text-v3-ink2">You can still negotiate and pay with PayPal Sandbox. Activity from this browser is listed under “This browser”.</p>
           <div className="flex flex-wrap justify-center gap-3">
-            <Link href="/v5/brief" className={btn("primary", "md")}>New negotiation</Link>
-            <Link href="/v5/activity" className={btn("secondary", "md")}>This browser</Link>
+            <Link href="/brief" className={btn("primary", "md")}>New negotiation</Link>
+            <Link href="/activity" className={btn("secondary", "md")}>This browser</Link>
           </div>
         </div>
       </Center>
@@ -55,8 +55,8 @@ export function MemberGate({ children }: { children: (user: SessionUser) => Reac
           <p className="font-v3-head text-2xl font-extrabold">Sign in to see your history.</p>
           <p className="text-v3-ink2">Your requests, analyses, negotiations and payments are saved to your account.</p>
           <div className="flex flex-wrap justify-center gap-3">
-            <Link href="/v5/login?next=/v5/profile" className={btn("primary", "md")}>Sign in</Link>
-            <Link href="/v5/signup?next=/v5/profile" className={btn("secondary", "md")}>Create an account</Link>
+            <Link href="/login?next=/profile" className={btn("primary", "md")}>Sign in</Link>
+            <Link href="/signup?next=/profile" className={btn("secondary", "md")}>Create an account</Link>
           </div>
         </div>
       </Center>
@@ -133,7 +133,7 @@ export function HistoryList({ data, facet, limit }: { data: Loaded; facet: Facet
       <div className="v3-card p-8 text-center">
         <p className="font-v3-head text-xl font-extrabold">Nothing here yet.</p>
         <p className="mt-2 text-v3-ink2">Your negotiations are saved here when you start them while signed in.</p>
-        <Link href="/v5/brief" className={btn("primary", "md", "mt-5")}>Start your first negotiation</Link>
+        <Link href="/brief" className={btn("primary", "md", "mt-5")}>Start your first negotiation</Link>
       </div>
     );
   return (
@@ -196,11 +196,11 @@ function Row({ s, pay, facet }: { s: HistorySession; pay: HistoryPayment | undef
 
       <div className="mt-4 flex flex-wrap gap-2">
         {finished && (
-          <Link href={`/v5/deals/${s.id}`} className={btn("secondary", "sm")}>
+          <Link href={`/deals/${s.id}`} className={btn("secondary", "sm")}>
             {facet === "analyses" ? "Open analysis and offers" : "Open the offers"}
           </Link>
         )}
-        <Link href={`/v5/negotiation/${s.id}`} className={btn("ghost", "sm")}>
+        <Link href={`/negotiation/${s.id}`} className={btn("ghost", "sm")}>
           Reopen the negotiation
         </Link>
       </div>
