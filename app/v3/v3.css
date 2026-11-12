@@ -1,0 +1,657 @@
+/*
+ * AgentDeal V3 — "Playful premium fintech".
+ * Self-contained: this stylesheet is imported only by app/v3/layout.tsx (its own root layout), so nothing here can
+ * reach the classic UI and nothing in app/globals.css can reach V3. Tailwind only scans V3 folders.
+ * Reference: AgentDeal_DOCS/V3/DESIGN_SYSTEM.md
+ */
+@import "tailwindcss" source(none);
+@source "./";
+@source "../../components/v3";
+@source "../../lib/v3";
+
+/* ---------- Tokens ---------- */
+@theme static {
+  /* Surfaces: warm paper, never grey. */
+  --color-v3-bg: #fbfaf6;
+  --color-v3-sunken: #f3f1ea;
+  --color-v3-surface: #ffffff;
+  /* Text: deep indigo ink. 14.9:1 on bg; muted text 6.8:1 on bg and 5.9:1 on the violet tint. */
+  --color-v3-ink: #1b1b5a;
+  --color-v3-ink2: #55547f;
+  /* Lines. --control is the 3:1 outline for inputs (WCAG 1.4.11). */
+  --color-v3-line: #e7e4f0;
+  --color-v3-line-strong: #cfcbe0;
+  --color-v3-control: #7c7ba3;
+  /* Identity: electric indigo. Fills pass 5.3:1 with white text; --primary-ink is for text on light surfaces. */
+  --color-v3-primary: #3d5af1;
+  --color-v3-primary-hover: #2a41c4;
+  --color-v3-primary-ink: #3550e0;
+  --color-v3-electric: #4c6bff; /* decorative only: 4.3:1 with white, never for text */
+  --color-v3-soft: #e9e7ff;
+  --color-v3-soft2: #f4f2ff;
+  /* Agent D's warm accent (backpack). Expressive, never a status. */
+  --color-v3-accent: #ffb347;
+  --color-v3-accent-soft: #fff1d6;
+  /* Semantic: only for real state. All pass AA on their own soft background. */
+  --color-v3-success: #15803d;
+  --color-v3-success-soft: #eaf7ee;
+  --color-v3-success-line: #bfe3cb;
+  --color-v3-warn: #8a4b08;
+  --color-v3-warn-soft: #fff3dc;
+  --color-v3-warn-line: #f1d9a6;
+  --color-v3-danger: #b91c1c;
+  --color-v3-danger-soft: #fdecec;
+  --color-v3-danger-line: #f5c2c2;
+}
+
+@theme inline {
+  --font-v3-head: var(--nf-v3-display), "Trebuchet MS", system-ui, sans-serif;
+  --font-v3-body: var(--nf-v3-sans), system-ui, -apple-system, "Segoe UI", sans-serif;
+  --radius-v3-sm: 10px;
+  --radius-v3-md: 14px;
+  --radius-v3-lg: 22px;
+  --radius-v3-xl: 30px;
+  --shadow-v3-card: 0 1px 0 rgb(27 27 90 / 0.04), 0 14px 34px -18px rgb(27 27 90 / 0.22);
+  --shadow-v3-lift: 0 1px 0 rgb(27 27 90 / 0.05), 0 24px 48px -20px rgb(27 27 90 / 0.3);
+}
+
+:root {
+  /* Motion: one curve, three durations, plus narrative movement tied to real events (walks, sprites). */
+  --v3-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --v3-ease-io: cubic-bezier(0.65, 0, 0.35, 1);
+  --v3-d1: 160ms; /* micro: hover, press, focus */
+  --v3-d2: 280ms; /* state: panels, chips, selection */
+  --v3-d3: 520ms; /* entry: reveals */
+  --v3-walk: 700ms; /* Agent D crossing the stage (matches WALK_MS in lib/v3/mascot/event-map.ts) */
+}
+
+/* ---------- Base ---------- */
+.v3-root {
+  background: var(--color-v3-bg);
+  color: var(--color-v3-ink);
+  font-family: var(--font-v3-body);
+  font-size: 1rem;
+  line-height: 1.55;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -webkit-text-size-adjust: 100%;
+}
+.v3-root *:focus-visible {
+  outline: 3px solid var(--color-v3-primary);
+  outline-offset: 3px;
+  border-radius: 8px;
+}
+.v3-root ::selection {
+  background: var(--color-v3-soft);
+  color: var(--color-v3-ink);
+}
+.v3-root .tabular,
+.v3-root .v3-num {
+  font-variant-numeric: tabular-nums lining-nums;
+}
+/* PayPal's official button owns its own look; we only give it room. */
+.v3-root paypal-button {
+  display: block;
+  width: 100%;
+}
+
+/* Headlines: big, tight, expressive. Display font only for headings and prices, never for dense info. */
+.v3-display {
+  font-family: var(--font-v3-head);
+  font-weight: 800;
+  font-variation-settings: "opsz" 96;
+  letter-spacing: -0.035em;
+  line-height: 0.96;
+  text-wrap: balance;
+}
+.v3-h2 {
+  font-family: var(--font-v3-head);
+  font-weight: 750;
+  font-variation-settings: "opsz" 48;
+  letter-spacing: -0.028em;
+  line-height: 1.02;
+  text-wrap: balance;
+}
+.v3-eyebrow {
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--color-v3-primary-ink);
+}
+/* A marker swash behind one key word of a headline. Stepped edges nod to the pixel world. */
+.v3-hl {
+  background: linear-gradient(transparent 58%, var(--color-v3-accent) 58% 90%, transparent 90%);
+  padding: 0 0.08em;
+  margin: 0 -0.08em;
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+}
+
+/* ---------- Surfaces ---------- */
+.v3-card {
+  background: var(--color-v3-surface);
+  border: 1px solid var(--color-v3-line);
+  border-radius: var(--radius-v3-lg);
+  box-shadow: var(--shadow-v3-card);
+}
+.v3-card--flat {
+  box-shadow: none;
+}
+.v3-tint {
+  background: var(--color-v3-soft2);
+  border: 1px solid var(--color-v3-soft);
+  border-radius: var(--radius-v3-lg);
+}
+/* Faint pixel grid for scenes. Decorative, low contrast, only behind Agent D's world. */
+.v3-dots {
+  background-image: radial-gradient(rgb(27 27 90 / 0.1) 1.2px, transparent 1.4px);
+  background-size: 22px 22px;
+}
+.v3-scene-sky {
+  background:
+    radial-gradient(120% 90% at 85% 0%, #fff4dc 0%, transparent 55%),
+    linear-gradient(180deg, #eceaff 0%, #f6f4ff 58%, #fbfaf6 100%);
+}
+.v3-ground {
+  background:
+    linear-gradient(var(--color-v3-ink) 0 0) top / 100% 3px no-repeat,
+    repeating-linear-gradient(90deg, #e5e1d4 0 24px, #ece9de 24px 48px);
+}
+
+/* ---------- Buttons ---------- */
+.v3-btn {
+  --h: 3rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.55rem;
+  min-height: var(--h);
+  padding: 0 1.4rem;
+  border-radius: var(--radius-v3-md);
+  font-weight: 700;
+  font-size: 0.975rem;
+  line-height: 1;
+  letter-spacing: -0.005em;
+  white-space: nowrap;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition:
+    transform var(--v3-d1) var(--v3-ease),
+    box-shadow var(--v3-d1) var(--v3-ease),
+    background-color var(--v3-d1) var(--v3-ease),
+    border-color var(--v3-d1) var(--v3-ease);
+}
+.v3-btn--lg {
+  --h: 3.4rem;
+  padding: 0 1.75rem;
+  font-size: 1.05rem;
+}
+.v3-btn--sm {
+  --h: 2.75rem; /* 44px: the touch target floor */
+  padding: 0 1rem;
+  font-size: 0.9rem;
+}
+.v3-btn:disabled,
+.v3-btn[aria-disabled="true"] {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+/* The one tactile flourish: a stacked bottom edge, like a pressable game tile. */
+.v3-btn--primary {
+  background: var(--color-v3-primary);
+  color: #fff;
+  box-shadow: 0 3px 0 var(--color-v3-primary-hover), 0 12px 22px -12px rgb(61 90 241 / 0.7);
+}
+.v3-btn--primary:not(:disabled):hover {
+  background: var(--color-v3-primary-hover);
+  transform: translateY(-1px);
+}
+.v3-btn--primary:not(:disabled):active {
+  transform: translateY(2px);
+  box-shadow: 0 1px 0 var(--color-v3-primary-hover);
+}
+.v3-btn--secondary {
+  background: var(--color-v3-surface);
+  color: var(--color-v3-ink);
+  border-color: var(--color-v3-line-strong);
+}
+.v3-btn--secondary:not(:disabled):hover {
+  background: var(--color-v3-soft2);
+  border-color: var(--color-v3-control);
+}
+.v3-btn--ghost {
+  background: transparent;
+  color: var(--color-v3-ink2);
+}
+.v3-btn--ghost:not(:disabled):hover {
+  background: var(--color-v3-soft2);
+  color: var(--color-v3-ink);
+}
+.v3-btn .v3-arrow {
+  transition: transform var(--v3-d1) var(--v3-ease);
+}
+.v3-btn:hover .v3-arrow {
+  transform: translateX(3px);
+}
+
+/* ---------- Chips ---------- */
+.v3-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.28rem 0.65rem;
+  border-radius: 999px;
+  border: 1px solid var(--color-v3-line);
+  background: var(--color-v3-surface);
+  color: var(--color-v3-ink2);
+  font-size: 0.78rem;
+  font-weight: 650;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+.v3-chip--primary {
+  background: var(--color-v3-soft);
+  border-color: transparent;
+  color: var(--color-v3-ink);
+}
+.v3-chip--accent {
+  background: var(--color-v3-accent-soft);
+  border-color: #f6d9a0;
+  color: var(--color-v3-warn);
+}
+.v3-chip--success {
+  background: var(--color-v3-success-soft);
+  border-color: var(--color-v3-success-line);
+  color: var(--color-v3-success);
+}
+.v3-chip--warn {
+  background: var(--color-v3-warn-soft);
+  border-color: var(--color-v3-warn-line);
+  color: var(--color-v3-warn);
+}
+.v3-chip--danger {
+  background: var(--color-v3-danger-soft);
+  border-color: var(--color-v3-danger-line);
+  color: var(--color-v3-danger);
+}
+
+/* ---------- Form controls ---------- */
+.v3-input {
+  width: 100%;
+  min-height: 3rem;
+  padding: 0 0.9rem;
+  background: var(--color-v3-surface);
+  color: var(--color-v3-ink);
+  border: 1.5px solid var(--color-v3-control);
+  border-radius: var(--radius-v3-md);
+  font: inherit;
+  transition:
+    border-color var(--v3-d1) var(--v3-ease),
+    box-shadow var(--v3-d1) var(--v3-ease);
+}
+.v3-input::placeholder {
+  color: var(--color-v3-ink2);
+  opacity: 0.8;
+}
+.v3-input:hover {
+  border-color: var(--color-v3-ink2);
+}
+.v3-input--prefix {
+  padding-left: 2rem;
+}
+.v3-input[aria-invalid="true"] {
+  border-color: var(--color-v3-danger);
+}
+
+/* ---------- Agent D sprite ----------
+ * One spritesheet (8 frames, 512px each) slides left in 8 hard steps with `steps(8, jump-none)`: every frame is held
+ * for exactly 1/8 of the cycle, the last frame holds when a one-shot ends, and the motion is a compositor-only
+ * transform (no React re-render per frame). Duration is the pack's own cadence (frame ms x 8). */
+.v3-agent {
+  position: relative;
+  display: inline-block;
+  width: var(--agent-size, 160px);
+  height: var(--agent-size, 160px);
+  overflow: hidden;
+  flex: none;
+  contain: layout paint size;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+.v3-agent__sheet,
+.v3-agent__pose {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  max-width: none;
+  pointer-events: none;
+  -webkit-user-drag: none;
+}
+.v3-agent__sheet {
+  width: 800%;
+  animation-name: v3-sprite;
+  animation-timing-function: steps(8, jump-none);
+  animation-duration: var(--agent-cycle, 640ms);
+  animation-iteration-count: var(--agent-iter, infinite);
+  animation-fill-mode: forwards;
+  will-change: transform;
+}
+.v3-agent__pose {
+  width: 100%;
+}
+.v3-agent[data-paused="true"] .v3-agent__sheet {
+  animation-play-state: paused;
+}
+@keyframes v3-sprite {
+  from {
+    transform: translate3d(0, 0, 0);
+  }
+  to {
+    transform: translate3d(-87.5%, 0, 0);
+  }
+}
+.v3-agent-flip {
+  display: inline-block;
+  transform: scaleX(-1);
+}
+.v3-shadow-blob {
+  width: 62%;
+  height: 12px;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, rgb(27 27 90 / 0.22), transparent);
+}
+
+/* ---------- Negotiation stage ---------- */
+.v3-rail {
+  position: relative;
+  container-type: inline-size;
+  container-name: v3rail;
+}
+/* Agent D crosses the stage with a transform (container-width units), never with layout. On narrow containers
+ * the mover stays in normal flow (a sticky bar); from 672px it walks along the street between the stalls. */
+.v3-mover {
+  position: relative;
+  will-change: translate;
+}
+@container v3rail (min-width: 672px) {
+  .v3-mover {
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    /* 1.25rem = the stage padding; the clamp keeps the bubble inside the stage at the outer stalls. */
+    translate: clamp(0px, calc(1.25rem + var(--spot-x, 50) * (100cqw - 2.5rem) / 100 - 50%), calc(100cqw - 100%)) 0;
+    transition: translate var(--v3-walk) var(--v3-ease);
+  }
+  /* The four stalls sit side by side under the street. Two classes of specificity so the order of the file
+   * (and any at-rule merging by the CSS minifier) can never let the mobile scroller rules win. */
+  .v3-rail .v3-snap {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 1rem;
+    overflow: visible;
+    scroll-snap-type: none;
+  }
+  .v3-rail .v3-snap > * {
+    flex: initial;
+  }
+}
+.v3-bubble {
+  position: relative;
+  background: var(--color-v3-surface);
+  border: 1.5px solid var(--color-v3-ink);
+  border-radius: 14px;
+  padding: 0.55rem 0.8rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  line-height: 1.35;
+  box-shadow: 3px 3px 0 var(--color-v3-ink);
+}
+.v3-bubble::after {
+  content: "";
+  position: absolute;
+  left: 22px;
+  bottom: -8px;
+  width: 12px;
+  height: 12px;
+  background: var(--color-v3-surface);
+  border-right: 1.5px solid var(--color-v3-ink);
+  border-bottom: 1.5px solid var(--color-v3-ink);
+  transform: rotate(45deg);
+}
+.v3-awning {
+  height: 14px;
+  border-radius: 8px 8px 0 0;
+  background: repeating-linear-gradient(90deg, var(--awning, var(--color-v3-primary)) 0 14px, #fff 14px 28px);
+  border-bottom: 2px solid rgb(27 27 90 / 0.2);
+}
+.v3-stall {
+  position: relative;
+  border-radius: 6px 6px var(--radius-v3-lg) var(--radius-v3-lg);
+  border: 1.5px solid var(--color-v3-line);
+  background: var(--color-v3-surface);
+  transition:
+    border-color var(--v3-d2) var(--v3-ease),
+    box-shadow var(--v3-d2) var(--v3-ease),
+    transform var(--v3-d2) var(--v3-ease),
+    opacity var(--v3-d2) var(--v3-ease);
+}
+.v3-stall[data-active="true"] {
+  border-color: var(--color-v3-ink);
+  box-shadow: 4px 4px 0 var(--color-v3-ink);
+  transform: translate(-2px, -2px);
+}
+.v3-stall[data-state="waiting"] {
+  opacity: 0.62;
+}
+.v3-stall[data-state="set_aside"] {
+  opacity: 0.8;
+  background: repeating-linear-gradient(135deg, #fff 0 10px, #f8f7f3 10px 20px);
+}
+.v3-stall[data-state="winner"] {
+  border-color: var(--color-v3-success);
+  box-shadow: 4px 4px 0 var(--color-v3-success);
+}
+@keyframes v3-ping {
+  0% {
+    opacity: 0.55;
+    transform: scale(0.6);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(2.2);
+  }
+}
+.v3-ping {
+  position: absolute;
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  border: 2px solid var(--color-v3-primary);
+  pointer-events: none;
+  animation: v3-ping 900ms var(--v3-ease) both;
+}
+@keyframes v3-flash {
+  0% {
+    background-color: var(--color-v3-accent);
+  }
+  100% {
+    background-color: transparent;
+  }
+}
+.v3-flash {
+  animation: v3-flash 900ms var(--v3-ease) both;
+  border-radius: 8px;
+}
+
+/* ---------- Entrances & ambient ---------- */
+@keyframes v3-rise {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 14px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.v3-rise {
+  animation: v3-rise var(--v3-d3) var(--v3-ease) both;
+  animation-delay: calc(var(--i, 0) * 70ms);
+}
+@keyframes v3-pop {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 8px, 0) scale(0.94);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.v3-pop {
+  animation: v3-pop var(--v3-d2) var(--v3-ease) both;
+}
+@keyframes v3-float {
+  0%,
+  100% {
+    translate: 0 0;
+  }
+  50% {
+    translate: 0 -6px;
+  }
+}
+.v3-float {
+  animation: v3-float 7s ease-in-out infinite;
+}
+@keyframes v3-drift {
+  from {
+    translate: -12% 0;
+  }
+  to {
+    translate: 112% 0;
+  }
+}
+.v3-drift {
+  animation: v3-drift var(--drift, 60s) linear infinite;
+  animation-delay: var(--delay, 0s);
+}
+@keyframes v3-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.v3-spin {
+  animation: v3-spin 700ms linear infinite;
+}
+@keyframes v3-shimmer {
+  from {
+    transform: translate3d(-100%, 0, 0);
+  }
+  to {
+    transform: translate3d(100%, 0, 0);
+  }
+}
+.v3-skeleton {
+  position: relative;
+  overflow: hidden;
+  background: var(--color-v3-sunken);
+}
+.v3-skeleton::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, rgb(255 255 255 / 0.8), transparent);
+  animation: v3-shimmer 1.6s linear infinite;
+}
+@keyframes v3-typing {
+  0%,
+  60%,
+  100% {
+    opacity: 0.35;
+    transform: translate3d(0, 0, 0);
+  }
+  30% {
+    opacity: 1;
+    transform: translate3d(0, -3px, 0);
+  }
+}
+.v3-typing-dot {
+  display: inline-block;
+  width: 5px;
+  height: 5px;
+  border-radius: 999px;
+  background: currentColor;
+  animation: v3-typing 1s var(--v3-ease-io) infinite;
+  animation-delay: calc(var(--k, 0) * 160ms);
+}
+@keyframes v3-draw {
+  from {
+    stroke-dashoffset: 30;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+/* Ambient loops stop when their scene is off screen or the tab is hidden (data-live="false"). */
+[data-live="false"] .v3-float,
+[data-live="false"] .v3-drift,
+[data-live="false"] .v3-typing-dot {
+  animation-play-state: paused;
+}
+
+/* Smooth bars: width changes are transforms, not layout. */
+.v3-bar {
+  transform-origin: left center;
+  transition: transform var(--v3-d3) var(--v3-ease);
+}
+.v3-slide {
+  transition:
+    translate var(--v3-d3) var(--v3-ease),
+    scale var(--v3-d3) var(--v3-ease);
+}
+
+/* Horizontal card scrollers on small screens. */
+.v3-snap {
+  display: flex;
+  gap: 0.75rem;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+.v3-snap::-webkit-scrollbar {
+  display: none;
+}
+.v3-snap > * {
+  scroll-snap-align: center;
+  flex: 0 0 min(82%, 20rem);
+}
+/* ---------- Reduced motion: the finished state, in full. Nothing is hidden or left empty. ---------- */
+@media (prefers-reduced-motion: reduce) {
+  .v3-root *,
+  .v3-root *::before,
+  .v3-root *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    animation-delay: 0ms !important;
+    transition-duration: 0.01ms !important;
+    transition-delay: 0ms !important;
+    scroll-behavior: auto !important;
+  }
+  .v3-float,
+  .v3-drift,
+  .v3-ping {
+    animation: none !important;
+  }
+  .v3-ping {
+    display: none;
+  }
+  .v3-rise,
+  .v3-pop {
+    opacity: 1 !important;
+    transform: none !important;
+  }
+}

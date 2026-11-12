@@ -1,0 +1,296 @@
+{
+  "name": "Agent D — HQ Animation Pack V3",
+  "version": "3.0.0",
+  "displaySizeCSS": 160,
+  "frameSize": 512,
+  "gifFrameSize": 443,
+  "states": {
+    "idle": {
+      "label": "En reposo",
+      "durationMs": 90,
+      "frames": 8,
+      "playback": "loop",
+      "category": "original",
+      "gifCanvas": [
+        443,
+        443
+      ],
+      "pngCanvas": [
+        512,
+        512
+      ],
+      "webpCanvas": [
+        512,
+        512
+      ]
+    },
+    "run": {
+      "label": "Corriendo",
+      "durationMs": 70,
+      "frames": 8,
+      "playback": "loop",
+      "category": "original",
+      "gifCanvas": [
+        443,
+        443
+      ],
+      "pngCanvas": [
+        512,
+        512
+      ],
+      "webpCanvas": [
+        512,
+        512
+      ]
+    },
+    "search": {
+      "label": "Buscando ofertas",
+      "durationMs": 80,
+      "frames": 8,
+      "playback": "loop",
+      "category": "original",
+      "gifCanvas": [
+        443,
+        443
+      ],
+      "pngCanvas": [
+        512,
+        512
+      ],
+      "webpCanvas": [
+        512,
+        512
+      ]
+    },
+    "thinking": {
+      "label": "Analizando",
+      "durationMs": 100,
+      "frames": 8,
+      "playback": "loop",
+      "category": "original",
+      "gifCanvas": [
+        443,
+        443
+      ],
+      "pngCanvas": [
+        512,
+        512
+      ],
+      "webpCanvas": [
+        512,
+        512
+      ]
+    },
+    "talk": {
+      "label": "Negociando",
+      "durationMs": 80,
+      "frames": 8,
+      "playback": "loop",
+      "category": "original",
+      "gifCanvas": [
+        443,
+        443
+      ],
+      "pngCanvas": [
+        512,
+        512
+      ],
+      "webpCanvas": [
+        512,
+        512
+      ]
+    },
+    "success": {
+      "label": "Mejor oferta",
+      "durationMs": 80,
+      "frames": 8,
+      "playback": "once",
+      "category": "original",
+      "gifCanvas": [
+        443,
+        443
+      ],
+      "pngCanvas": [
+        512,
+        512
+      ],
+      "webpCanvas": [
+        512,
+        512
+      ]
+    },
+    "jump": {
+      "label": "Saltando",
+      "durationMs": 80,
+      "frames": 8,
+      "playback": "once",
+      "category": "original",
+      "gifCanvas": [
+        443,
+        443
+      ],
+      "pngCanvas": [
+        512,
+        512
+      ],
+      "webpCanvas": [
+        512,
+        512
+      ]
+    },
+    "discount": {
+      "label": "Descuento",
+      "durationMs": 80,
+      "frames": 8,
+      "playback": "once",
+      "category": "original",
+      "gifCanvas": [
+        443,
+        443
+      ],
+      "pngCanvas": [
+        512,
+        512
+      ],
+      "webpCanvas": [
+        512,
+        512
+      ]
+    },
+    "accept": {
+      "label": "Oferta aceptada",
+      "durationMs": 80,
+      "frames": 8,
+      "playback": "once",
+      "category": "new",
+      "gifCanvas": [
+        443,
+        443
+      ],
+      "pngCanvas": [
+        512,
+        512
+      ],
+      "webpCanvas": [
+        512,
+        512
+      ]
+    },
+    "reject": {
+      "label": "Oferta rechazada",
+      "durationMs": 75,
+      "frames": 8,
+      "playback": "once",
+      "category": "new",
+      "gifCanvas": [
+        443,
+        443
+      ],
+      "pngCanvas": [
+        512,
+        512
+      ],
+      "webpCanvas": [
+        512,
+        512
+      ]
+    },
+    "counteroffer": {
+      "label": "Enviando contraoferta",
+      "durationMs": 75,
+      "frames": 8,
+      "playback": "loop",
+      "category": "new",
+      "gifCanvas": [
+        443,
+        443
+      ],
+      "pngCanvas": [
+        512,
+        512
+      ],
+      "webpCanvas": [
+        512,
+        512
+      ]
+    },
+    "offer_received": {
+      "label": "Respuesta recibida",
+      "durationMs": 80,
+      "frames": 8,
+      "playback": "once",
+      "category": "new",
+      "gifCanvas": [
+        443,
+        443
+      ],
+      "pngCanvas": [
+        512,
+        512
+      ],
+      "webpCanvas": [
+        512,
+        512
+      ]
+    },
+    "surprised": {
+      "label": "¡Sorpresa!",
+      "durationMs": 70,
+      "frames": 8,
+      "playback": "once",
+      "category": "new",
+      "gifCanvas": [
+        443,
+        443
+      ],
+      "pngCanvas": [
+        512,
+        512
+      ],
+      "webpCanvas": [
+        512,
+        512
+      ]
+    },
+    "payment_approved": {
+      "label": "Pago confirmado",
+      "durationMs": 80,
+      "frames": 8,
+      "playback": "once",
+      "category": "new",
+      "gifCanvas": [
+        443,
+        443
+      ],
+      "pngCanvas": [
+        512,
+        512
+      ],
+      "webpCanvas": [
+        512,
+        512
+      ]
+    }
+  },
+  "order": [
+    "idle",
+    "search",
+    "thinking",
+    "talk",
+    "run",
+    "offer_received",
+    "counteroffer",
+    "reject",
+    "accept",
+    "success",
+    "jump",
+    "discount",
+    "surprised",
+    "payment_approved"
+  ],
+  "notices": [
+    "Demo visual con tiendas simuladas y precios de ejemplo.",
+    "Aceptar una oferta y confirmar un pago son eventos diferentes.",
+    "Archivos PNG y WebP tienen transparencia alfa; GIF usa paleta de 256 colores."
+  ]
+}

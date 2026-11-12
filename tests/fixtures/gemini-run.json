@@ -1,0 +1,748 @@
+{
+ "note": "Events persisted by a real multi-agent run with Gemini (gemini-3.5-flash), 2026-11-12. Texts are verbatim model output.",
+ "intent": {
+  "productQuery": "Wireless noise-cancelling headphones",
+  "budgetCents": 35000,
+  "currency": "EUR",
+  "priority": "best_value",
+  "preferences": [
+   "warranty"
+  ],
+  "language": "en"
+ },
+ "mode": "multi_agent",
+ "events": [
+  {
+   "eventId": "evt_993da5d7-2e56-4409-af20-78f92031c058_init",
+   "sessionId": "ses_993da5d7-2e56-4409-af20-78f92031c058",
+   "sequence": 0,
+   "atMs": 2,
+   "phase": "initialize",
+   "type": "AGENT_INITIALIZED",
+   "sellerId": null,
+   "payload": {
+    "productQuery": "Wireless noise-cancelling headphones",
+    "budgetCents": 35000,
+    "mode": "multi_agent"
+   },
+   "feedText": "Your AI agent is looking for \"Wireless noise-cancelling headphones\" with a maximum budget of €350.00."
+  },
+  {
+   "eventId": "evt_993da5d7-2e56-4409-af20-78f92031c058_disc_nova",
+   "sessionId": "ses_993da5d7-2e56-4409-af20-78f92031c058",
+   "sequence": 1,
+   "atMs": 6,
+   "phase": "discover",
+   "type": "SELLER_DISCOVERED",
+   "sellerId": "nova",
+   "payload": {
+    "sellerId": "nova",
+    "brand": "AliExpress",
+    "strategy": "price_fighter",
+    "productName": "Wireless ANC Headphones · Value edition"
+   },
+   "feedText": "AliExpress (demo store) joined with \"Wireless ANC Headphones · Value edition\"."
+  },
+  {
+   "eventId": "evt_993da5d7-2e56-4409-af20-78f92031c058_disc_orbit",
+   "sessionId": "ses_993da5d7-2e56-4409-af20-78f92031c058",
+   "sequence": 2,
+   "atMs": 9,
+   "phase": "discover",
+   "type": "SELLER_DISCOVERED",
+   "sellerId": "orbit",
+   "payload": {
+    "sellerId": "orbit",
+    "brand": "Amazon",
+    "strategy": "fast_delivery",
+    "productName": "Wireless ANC Headphones · Express edition"
+   },
+   "feedText": "Amazon (demo store) joined with \"Wireless ANC Headphones · Express edition\"."
+  },
+  {
+   "eventId": "evt_993da5d7-2e56-4409-af20-78f92031c058_disc_prism",
+   "sessionId": "ses_993da5d7-2e56-4409-af20-78f92031c058",
+   "sequence": 3,
+   "atMs": 12,
+   "phase": "discover",
+   "type": "SELLER_DISCOVERED",
+   "sellerId": "prism",
+   "payload": {
+    "sellerId": "prism",
+    "brand": "Best Buy",
+    "strategy": "premium_value",
+    "productName": "Wireless ANC Headphones · Premium edition"
+   },
+   "feedText": "Best Buy (demo store) joined with \"Wireless ANC Headphones · Premium edition\"."
+  },
+  {
+   "eventId": "evt_993da5d7-2e56-4409-af20-78f92031c058_disc_vertex",
+   "sessionId": "ses_993da5d7-2e56-4409-af20-78f92031c058",
+   "sequence": 4,
+   "atMs": 15,
+   "phase": "discover",
+   "type": "SELLER_DISCOVERED",
+   "sellerId": "vertex",
+   "payload": {
+    "sellerId": "vertex",
+    "brand": "eBay",
+    "strategy": "hard_negotiator",
+    "productName": "Wireless ANC Headphones · Pro edition"
+   },
+   "feedText": "eBay (demo store) joined with \"Wireless ANC Headphones · Pro edition\"."
+  },
+  {
+   "eventId": "evt_993da5d7-2e56-4409-af20-78f92031c058_open_nova",
+   "sessionId": "ses_993da5d7-2e56-4409-af20-78f92031c058",
+   "sequence": 5,
+   "atMs": 1496,
+   "phase": "offers",
+   "type": "OFFER_RECEIVED",
+   "sellerId": "nova",
+   "payload": {
+    "offerId": "off_4d8fb71f-65a8-414d-b325-ef98176a1767",
+    "initialPriceCents": 27990,
+    "itemPriceCents": 27400,
+    "shippingCents": 590,
+    "message": "We offer the Wireless ANC Headphones · Value edition for just €274.00 plus €5.90 fixed shipping. It includes a 12-month warranty, giving you unbeatable global marketplace value.",
+    "source": "gemini",
+    "model": "gemini-3.5-flash",
+    "latencyMs": 1476,
+    "round": 0
+   },
+   "feedText": "AliExpress opened at €279.90 (€274.00 + €5.90 shipping): \"We offer the Wireless ANC Headphones · Value edition for just €274.00 plus €5.90 fixed shipping. It includes a 12-month warranty, giving you unbeatable global marketplace value.\""
+  },
+  {
+   "eventId": "evt_993da5d7-2e56-4409-af20-78f92031c058_open_orbit",
+   "sessionId": "ses_993da5d7-2e56-4409-af20-78f92031c058",
+   "sequence": 6,
+   "atMs": 1567,
+   "phase": "offers",
+   "type": "OFFER_RECEIVED",
+   "sellerId": "orbit",
+   "payload": {
+    "offerId": "off_c27302ba-3e09-4ca9-a891-a9dc112d8d7d",
+    "initialPriceCents": 31900,
+    "itemPriceCents": 31900,
+    "shippingCents": 0,
+    "message": "Get the Wireless ANC Headphones · Express edition for €319.00 with free next-day delivery. Premium sound and fast, reliable service guaranteed for your peace of mind.",
+    "source": "gemini",
+    "model": "gemini-3.5-flash",
+    "latencyMs": 1536,
+    "round": 0
+   },
+   "feedText": "Amazon opened at €319.00 (€319.00 + €0.00 shipping): \"Get the Wireless ANC Headphones · Express edition for €319.00 with free next-day delivery. Premium sound and fast, reliable service guaranteed for your peace of mind.\""
+  },
+  {
+   "eventId": "evt_993da5d7-2e56-4409-af20-78f92031c058_open_prism",
+   "sessionId": "ses_993da5d7-2e56-4409-af20-78f92031c058",
+   "sequence": 7,
+   "atMs": 1659,
+   "phase": "offers",
+   "type": "OFFER_RECEIVED",
+   "sellerId": "prism",
+   "payload": {
+    "offerId": "off_73fc3266-92ba-42ac-9b4f-f0648b2c3839",
+    "initialPriceCents": 34900,
+    "itemPriceCents": 34900,
+    "shippingCents": 0,
+    "message": "Welcome to Best Buy! Our Premium Wireless ANC Headphones are available for €349.00, including free shipping, a 30-day return policy, and our top-tier 36-month protection plan for ultimate peace of mind.",
+    "source": "gemini",
+    "model": "gemini-3.5-flash",
+    "latencyMs": 1627,
+    "round": 0
+   },
+   "feedText": "Best Buy opened at €349.00 (€349.00 + €0.00 shipping): \"Welcome to Best Buy! Our Premium Wireless ANC Headphones are available for €349.00, including free shipping, a 30-day return policy, and our top-tier 36-month protection plan for ultimate peace of mind.\""
+  },
+  {
+   "eventId": "evt_993da5d7-2e56-4409-af20-78f92031c058_open_vertex",
+   "sessionId": "ses_993da5d7-2e56-4409-af20-78f92031c058",
+   "sequence": 8,
+   "atMs": 2123,
+   "phase": "offers",
+   "type": "OFFER_RECEIVED",
+   "sellerId": "vertex",
+   "payload": {
+    "offerId": "off_78f42232-621e-4c93-9065-9659a7f99351",
+    "initialPriceCents": 37390,
+    "itemPriceCents": 36900,
+    "shippingCents": 490,
+    "message": "Hello! The Wireless ANC Headphones · Pro edition list for €369.00, plus €4.90 shipping. With premium build and full warranty included, this is exceptional value for a high-end model.",
+    "source": "gemini",
+    "model": "gemini-3.5-flash",
+    "latencyMs": 2091,
+    "round": 0
+   },
+   "feedText": "eBay opened at €373.90 (€369.00 + €4.90 shipping): \"Hello! The Wireless ANC Headphones · Pro edition list for €369.00, plus €4.90 shipping. With premium build and full warranty included, this is exceptional value for a high-end model.\""
+  },
+  {
+   "eventId": "evt_993da5d7-2e56-4409-af20-78f92031c058_r1_buyer_note",
+   "sessionId": "ses_993da5d7-2e56-4409-af20-78f92031c058",
+   "sequence": 9,
+   "atMs": 4180,
+   "phase": "negotiate",
+   "type": "BUYER_DECISION",
+   "sellerId": null,
+   "payload": {
+    "round": 1,
+    "source": "gemini",
+    "model": "gemini-3.5-flash",
+    "latencyMs": 2053
+   },
+   "feedText": "Round 1: Pushing sellers for discounts since this is the final negotiation round, leveraging lower competing prices to get the best value within budget."
+  },
+  {
+   "eventId": "evt_993da5d7-2e56-4409-af20-78f92031c058_r1_buyer_nova",
+   "sessionId": "ses_993da5d7-2e56-4409-af20-78f92031c058",
+   "sequence": 10,
+   "atMs": 4185,
+   "phase": "negotiate",
+   "type": "BUYER_MESSAGE",
+   "sellerId": "nova",
+   "payload": {
+    "sellerId": "nova",
+    "round": 1,
+    "targetPriceCents": 25000,
+    "message": "Your offer is good, but can you lower the item price to €250.00 to make it the ultimate value choice?",
+    "source": "gemini"
+   },
+   "feedText": "Your agent to AliExpress: \"Your offer is good, but can you lower the item price to €250.00 to make it the ultimate value choice?\" (target €250.00 for the item)"
+  },
+  {
+   "eventId": "evt_993da5d7-2e56-4409-af20-78f92031c058_r1_buyer_orbit",
+   "sessionId": "ses_993da5d7-2e56-4409-af20-78f92031c058",
+   "sequence": 11,
+   "atMs": 4189,
+   "phase": "negotiate",
+   "type": "BUYER_MESSAGE",
+   "sellerId": "orbit",
+   "payload": {
+    "sellerId": "orbit",
+    "round": 1,
+    "targetPriceCents": 29000,
+    "message": "AliExpress offers an ANC headphone set for €274.00. Can you match €290.00 with your free next-day shipping?",
+    "source": "gemini"
+   },
+   "feedText": "Your agent to Amazon: \"AliExpress offers an ANC headphone set for €274.00. Can you match €290.00 with your free next-day shipping?\" (target €290.00 for the item)"
+  },
+  {
+   "eventId": "evt_993da5d7-2e56-4409-af20-78f92031c058_r1_buyer_prism",
+   "sessionId": "ses_993da5d7-2e56-4409-af20-78f92031c058",
+   "sequence": 12,
+   "atMs": 4192,
+   "phase": "negotiate",
+   "type": "BUYER_MESSAGE",
+   "sellerId": "prism",
+   "payload": {
+    "sellerId": "prism",
+    "round": 1,
+    "targetPriceCents": 31000,
+    "message": "I love your 36-month warranty, but at €349.00 it's near my budget limit. Could you do €310.00?",
+    "source": "gemini"
+   },
+   "feedText": "Your agent to Best Buy: \"I love your 36-month warranty, but at €349.00 it's near my budget limit. Could you do €310.00?\" (target €310.00 for the item)"
+  },
+  {
+   "eventId": "evt_993da5d7-2e56-4409-af20-78f92031c058_r1_buyer_vertex",
+   "sessionId": "ses_993da5d7-2e56-4409-af20-78f92031c058",
+   "sequence": 13,
+   "atMs": 4195,
+   "phase": "negotiate",
+   "type": "BUYER_MESSAGE",
+   "sellerId": "vertex",
+   "payload": {
+    "sellerId": "vertex",
+    "round": 1,
+    "targetPriceCents": 33500,
+    "message": "Your total of €373.90 is over my €350.00 budget. Could you drop the item price to €335.00 so total fits my budget?",
+    "source": "gemini"
+   },
+   "feedText": "Your agent to eBay: \"Your total of €373.90 is over my €350.00 budget. Could you drop the item price to €335.00 so total fits my budget?\" (target €335.00 for the item)"
+  },
+  {
+   "eventId": "evt_993da5d7-2e56-4409-af20-78f92031c058_r1_seller_vertex",
+   "sessionId": "ses_993da5d7-2e56-4409-af20-78f92031c058",
+   "sequence": 14,
+   "atMs": 61655,
+   "phase": "negotiate",
+   "type": "COUNTEROFFER_RECEIVED",
+   "sellerId": "vertex",
+   "payload": {
+    "offerId": "off_78f42232-621e-4c93-9065-9659a7f99351",
+    "previousPriceCents": 37390,
+    "newPriceCents": 36890,
+    "itemPriceCents": 36400,
+    "held": false,
+    "round": 1,
+    "message": "Thank you for your interest. I can offer a small discount to €364.00 for the item. Shipping remains fixed at €4.90. This premium pair includes a full warranty and top-tier noise cancellation.",
+    "source": "gemini",
+    "model": "gemini-3.5-flash",
+    "latencyMs": 1579
+   },
+   "feedText": "eBay improved to €368.90 (was €373.90): \"Thank you for your interest. I can offer a small discount to €364.00 for the item. Shipping remains fixed at €4.90. This premium pair includes a full warranty and top-tier noise cancellation.\""
+  },
+  {
+   "eventId": "evt_993da5d7-2e56-4409-af20-78f92031c058_r1_seller_prism",
+   "sessionId": "ses_993da5d7-2e56-4409-af20-78f92031c058",
+   "sequence": 15,
+   "atMs": 61722,
+   "phase": "negotiate",
+   "type": "COUNTEROFFER_RECEIVED",
+   "sellerId": "prism",
+   "payload": {
+    "offerId": "off_73fc3266-92ba-42ac-9b4f-f0648b2c3839",
+    "previousPriceCents": 34900,
+    "newPriceCents": 33900,
+    "itemPriceCents": 33900,
+    "held": false,
+    "round": 1,
+    "message": "I appreciate your interest! Given the included 36-month protection plan and free shipping, €310.00 is too low, but I can lower the price to €339.00 for exceptional value today.",
+    "source": "gemini",
+    "model": "gemini-3.5-flash",
+    "latencyMs": 1646
+   },
+   "feedText": "Best Buy improved to €339.00 (was €349.00): \"I appreciate your interest! Given the included 36-month protection plan and free shipping, €310.00 is too low, but I can lower the price to €339.00 for exceptional value today.\""
+  },
+  {
+   "eventId": "evt_993da5d7-2e56-4409-af20-78f92031c058_r1_seller_nova",
+   "sessionId": "ses_993da5d7-2e56-4409-af20-78f92031c058",
+   "sequence": 16,
+   "atMs": 62640,
+   "phase": "negotiate",
+   "type": "COUNTEROFFER_RECEIVED",
+   "sellerId": "nova",
+   "payload": {
+    "offerId": "off_4d8fb71f-65a8-414d-b325-ef98176a1767",
+    "previousPriceCents": 27990,
+    "newPriceCents": 26390,
+    "itemPriceCents": 25800,
+    "held": false,
+    "round": 1,
+    "message": "I can lower the item price to €258.00 plus €5.90 shipping. At this incredible price with our 12-month warranty, you get the absolute best value on the market.",
+    "source": "gemini",
+    "model": "gemini-3.5-flash",
+    "latencyMs": 2568
+   },
+   "feedText": "AliExpress improved to €263.90 (was €279.90): \"I can lower the item price to €258.00 plus €5.90 shipping. At this incredible price with our 12-month warranty, you get the absolute best value on the market.\""
+  },
+  {
+   "eventId": "evt_993da5d7-2e56-4409-af20-78f92031c058_r1_seller_orbit",
+   "sessionId": "ses_993da5d7-2e56-4409-af20-78f92031c058",
+   "sequence": 17,
+   "atMs": 62903,
+   "phase": "negotiate",
+   "type": "COUNTEROFFER_RECEIVED",
+   "sellerId": "orbit",
+   "payload": {
+    "offerId": "off_c27302ba-3e09-4ca9-a891-a9dc112d8d7d",
+    "previousPriceCents": 31900,
+    "newPriceCents": 30624,
+    "itemPriceCents": 30624,
+    "held": false,
+    "round": 1,
+    "message": "We cannot match €290.00, but I can offer a reduced price of €306.24. With free next-day delivery, you get premium audio and unbeatable speed without the long wait.",
+    "source": "gemini",
+    "model": "gemini-3.5-flash",
+    "latencyMs": 2828
+   },
+   "feedText": "Amazon improved to €306.24 (was €319.00): \"We cannot match €290.00, but I can offer a reduced price of €306.24. With free next-day delivery, you get premium audio and unbeatable speed without the long wait.\""
+  },
+  {
+   "eventId": "evt_993da5d7-2e56-4409-af20-78f92031c058_rej_r2_buyer",
+   "sessionId": "ses_993da5d7-2e56-4409-af20-78f92031c058",
+   "sequence": 18,
+   "atMs": 121779,
+   "phase": "negotiate",
+   "type": "OFFER_REJECTED_BY_SERVER",
+   "sellerId": null,
+   "payload": {
+    "reasons": [
+     "schema_invalid:rationale",
+     "schema_invalid:rationale"
+    ]
+   },
+   "feedText": "The server rejected an invalid or out-of-policy proposal from Your agent (schema_invalid:rationale, schema_invalid:rationale)."
+  },
+  {
+   "eventId": "evt_993da5d7-2e56-4409-af20-78f92031c058_fb_r2_buyer",
+   "sessionId": "ses_993da5d7-2e56-4409-af20-78f92031c058",
+   "sequence": 19,
+   "atMs": 121784,
+   "phase": "negotiate",
+   "type": "AGENT_FALLBACK",
+   "sellerId": null,
+   "payload": {
+    "agent": "buyer",
+    "reason": "invalid_output",
+    "source": "rules_fallback"
+   },
+   "feedText": "Your agent: the AI turn failed (invalid_output); a rule-based move was used instead."
+  },
+  {
+   "eventId": "evt_993da5d7-2e56-4409-af20-78f92031c058_r2_buyer_note",
+   "sessionId": "ses_993da5d7-2e56-4409-af20-78f92031c058",
+   "sequence": 20,
+   "atMs": 121789,
+   "phase": "negotiate",
+   "type": "BUYER_DECISION",
+   "sellerId": null,
+   "payload": {
+    "round": 2,
+    "source": "rules_fallback",
+    "model": null,
+    "latencyMs": null
+   },
+   "feedText": "Round 2: Asking each seller for a small price improvement."
+  },
+  {
+   "eventId": "evt_993da5d7-2e56-4409-af20-78f92031c058_r2_buyer_nova",
+   "sessionId": "ses_993da5d7-2e56-4409-af20-78f92031c058",
+   "sequence": 21,
+   "atMs": 121792,
+   "phase": "negotiate",
+   "type": "BUYER_MESSAGE",
+   "sellerId": "nova",
+   "payload": {
+    "sellerId": "nova",
+    "round": 2,
+    "targetPriceCents": 24510,
+    "message": "Could you improve your price a little?",
+    "source": "rules_fallback"
+   },
+   "feedText": "Your agent to AliExpress: \"Could you improve your price a little?\" (target €245.10 for the item)"
+  },
+  {
+   "eventId": "evt_993da5d7-2e56-4409-af20-78f92031c058_r2_buyer_orbit",
+   "sessionId": "ses_993da5d7-2e56-4409-af20-78f92031c058",
+   "sequence": 22,
+   "atMs": 121797,
+   "phase": "negotiate",
+   "type": "BUYER_MESSAGE",
+   "sellerId": "orbit",
+   "payload": {
+    "sellerId": "orbit",
+    "round": 2,
+    "targetPriceCents": 29093,
+    "message": "Could you improve your price a little?",
+    "source": "rules_fallback"
+   },
+   "feedText": "Your agent to Amazon: \"Could you improve your price a little?\" (target €290.93 for the item)"
+  },
+  {
+   "eventId": "evt_993da5d7-2e56-4409-af20-78f92031c058_r2_buyer_prism",
+   "sessionId": "ses_993da5d7-2e56-4409-af20-78f92031c058",
+   "sequence": 23,
+   "atMs": 121802,
+   "phase": "negotiate",
+   "type": "BUYER_MESSAGE",
+   "sellerId": "prism",
+   "payload": {
+    "sellerId": "prism",
+    "round": 2,
+    "targetPriceCents": 32205,
+    "message": "Could you improve your price a little?",
+    "source": "rules_fallback"
+   },
+   "feedText": "Your agent to Best Buy: \"Could you improve your price a little?\" (target €322.05 for the item)"
+  },
+  {
+   "eventId": "evt_993da5d7-2e56-4409-af20-78f92031c058_r2_buyer_vertex",
+   "sessionId": "ses_993da5d7-2e56-4409-af20-78f92031c058",
+   "sequence": 24,
+   "atMs": 121809,
+   "phase": "negotiate",
+   "type": "BUYER_MESSAGE",
+   "sellerId": "vertex",
+   "payload": {
+    "sellerId": "vertex",
+    "round": 2,
+    "targetPriceCents": 34580,
+    "message": "Could you improve your price a little?",
+    "source": "rules_fallback"
+   },
+   "feedText": "Your agent to eBay: \"Could you improve your price a little?\" (target €345.80 for the item)"
+  },
+  {
+   "eventId": "evt_993da5d7-2e56-4409-af20-78f92031c058_r2_seller_nova",
+   "sessionId": "ses_993da5d7-2e56-4409-af20-78f92031c058",
+   "sequence": 25,
+   "atMs": 123014,
+   "phase": "negotiate",
+   "type": "COUNTEROFFER_RECEIVED",
+   "sellerId": "nova",
+   "payload": {
+    "offerId": "off_4d8fb71f-65a8-414d-b325-ef98176a1767",
+    "previousPriceCents": 26390,
+    "newPriceCents": 25490,
+    "itemPriceCents": 24900,
+    "held": false,
+    "round": 2,
+    "message": "I can offer our final best price of €249.00 plus €5.90 shipping. Combined with our 12-month warranty, this provides unmatched value for your budget.",
+    "source": "gemini",
+    "model": "gemini-3.5-flash",
+    "latencyMs": 1216
+   },
+   "feedText": "AliExpress improved to €254.90 (was €263.90): \"I can offer our final best price of €249.00 plus €5.90 shipping. Combined with our 12-month warranty, this provides unmatched value for your budget.\""
+  },
+  {
+   "eventId": "evt_993da5d7-2e56-4409-af20-78f92031c058_r2_seller_orbit",
+   "sessionId": "ses_993da5d7-2e56-4409-af20-78f92031c058",
+   "sequence": 26,
+   "atMs": 123075,
+   "phase": "negotiate",
+   "type": "COUNTEROFFER_RECEIVED",
+   "sellerId": "orbit",
+   "payload": {
+    "offerId": "off_c27302ba-3e09-4ca9-a891-a9dc112d8d7d",
+    "previousPriceCents": 30624,
+    "newPriceCents": 29900,
+    "itemPriceCents": 29900,
+    "held": false,
+    "round": 2,
+    "message": "I can lower the price to €299.00 with free next-day delivery. That is our absolute best offer for fast, premium service.",
+    "source": "gemini",
+    "model": "gemini-3.5-flash",
+    "latencyMs": 1274
+   },
+   "feedText": "Amazon improved to €299.00 (was €306.24): \"I can lower the price to €299.00 with free next-day delivery. That is our absolute best offer for fast, premium service.\""
+  },
+  {
+   "eventId": "evt_993da5d7-2e56-4409-af20-78f92031c058_r2_seller_prism",
+   "sessionId": "ses_993da5d7-2e56-4409-af20-78f92031c058",
+   "sequence": 27,
+   "atMs": 123268,
+   "phase": "negotiate",
+   "type": "COUNTEROFFER_RECEIVED",
+   "sellerId": "prism",
+   "payload": {
+    "offerId": "off_73fc3266-92ba-42ac-9b4f-f0648b2c3839",
+    "previousPriceCents": 33900,
+    "newPriceCents": 33200,
+    "itemPriceCents": 33200,
+    "held": false,
+    "round": 2,
+    "message": "I can offer a final special price of €332.00. This includes our comprehensive 36-month protection plan, 30-day returns, and free shipping, giving you complete long-term coverage.",
+    "source": "gemini",
+    "model": "gemini-3.5-flash",
+    "latencyMs": 1459
+   },
+   "feedText": "Best Buy improved to €332.00 (was €339.00): \"I can offer a final special price of €332.00. This includes our comprehensive 36-month protection plan, 30-day returns, and free shipping, giving you complete long-term coverage.\""
+  },
+  {
+   "eventId": "evt_993da5d7-2e56-4409-af20-78f92031c058_r2_seller_vertex",
+   "sessionId": "ses_993da5d7-2e56-4409-af20-78f92031c058",
+   "sequence": 28,
+   "atMs": 124395,
+   "phase": "negotiate",
+   "type": "COUNTEROFFER_RECEIVED",
+   "sellerId": "vertex",
+   "payload": {
+    "offerId": "off_78f42232-621e-4c93-9065-9659a7f99351",
+    "previousPriceCents": 36890,
+    "newPriceCents": 36390,
+    "itemPriceCents": 35900,
+    "held": false,
+    "round": 2,
+    "message": "I can make a final adjustment to €359.00 for the headphones, plus fixed shipping at €4.90. Our stock is extremely limited, and this is the best price I can provide for this Pro edition.",
+    "source": "gemini",
+    "model": "gemini-3.5-flash",
+    "latencyMs": 1434
+   },
+   "feedText": "eBay improved to €363.90 (was €368.90): \"I can make a final adjustment to €359.00 for the headphones, plus fixed shipping at €4.90. Our stock is extremely limited, and this is the best price I can provide for this Pro edition.\""
+  },
+  {
+   "eventId": "evt_993da5d7-2e56-4409-af20-78f92031c058_ver_nova",
+   "sessionId": "ses_993da5d7-2e56-4409-af20-78f92031c058",
+   "sequence": 29,
+   "atMs": 124401,
+   "phase": "evaluate",
+   "type": "REQUIREMENT_VERIFIED",
+   "sellerId": "nova",
+   "payload": {
+    "offerId": "off_4d8fb71f-65a8-414d-b325-ef98176a1767",
+    "requirement": "within_budget",
+    "passed": true
+   },
+   "feedText": "AliExpress: server check passed — total €254.90 vs budget €350.00."
+  },
+  {
+   "eventId": "evt_993da5d7-2e56-4409-af20-78f92031c058_ver_orbit",
+   "sessionId": "ses_993da5d7-2e56-4409-af20-78f92031c058",
+   "sequence": 30,
+   "atMs": 124406,
+   "phase": "evaluate",
+   "type": "REQUIREMENT_VERIFIED",
+   "sellerId": "orbit",
+   "payload": {
+    "offerId": "off_c27302ba-3e09-4ca9-a891-a9dc112d8d7d",
+    "requirement": "within_budget",
+    "passed": true
+   },
+   "feedText": "Amazon: server check passed — total €299.00 vs budget €350.00."
+  },
+  {
+   "eventId": "evt_993da5d7-2e56-4409-af20-78f92031c058_ver_prism",
+   "sessionId": "ses_993da5d7-2e56-4409-af20-78f92031c058",
+   "sequence": 31,
+   "atMs": 124410,
+   "phase": "evaluate",
+   "type": "REQUIREMENT_VERIFIED",
+   "sellerId": "prism",
+   "payload": {
+    "offerId": "off_73fc3266-92ba-42ac-9b4f-f0648b2c3839",
+    "requirement": "within_budget",
+    "passed": true
+   },
+   "feedText": "Best Buy: server check passed — total €332.00 vs budget €350.00."
+  },
+  {
+   "eventId": "evt_993da5d7-2e56-4409-af20-78f92031c058_ver_vertex",
+   "sessionId": "ses_993da5d7-2e56-4409-af20-78f92031c058",
+   "sequence": 32,
+   "atMs": 124415,
+   "phase": "evaluate",
+   "type": "REQUIREMENT_VERIFIED",
+   "sellerId": "vertex",
+   "payload": {
+    "offerId": "off_78f42232-621e-4c93-9065-9659a7f99351",
+    "requirement": "within_budget",
+    "passed": false
+   },
+   "feedText": "eBay: server check failed — total €363.90 vs budget €350.00."
+  },
+  {
+   "eventId": "evt_993da5d7-2e56-4409-af20-78f92031c058_evl_nova",
+   "sessionId": "ses_993da5d7-2e56-4409-af20-78f92031c058",
+   "sequence": 33,
+   "atMs": 182519,
+   "phase": "evaluate",
+   "type": "OFFER_EVALUATED",
+   "sellerId": "nova",
+   "payload": {
+    "offerId": "off_4d8fb71f-65a8-414d-b325-ef98176a1767",
+    "score": 45,
+    "reason": "eligible"
+   },
+   "feedText": "AliExpress scored 45/100 for your priorities."
+  },
+  {
+   "eventId": "evt_993da5d7-2e56-4409-af20-78f92031c058_evl_orbit",
+   "sessionId": "ses_993da5d7-2e56-4409-af20-78f92031c058",
+   "sequence": 34,
+   "atMs": 182525,
+   "phase": "evaluate",
+   "type": "OFFER_EVALUATED",
+   "sellerId": "orbit",
+   "payload": {
+    "offerId": "off_c27302ba-3e09-4ca9-a891-a9dc112d8d7d",
+    "score": 52,
+    "reason": "eligible"
+   },
+   "feedText": "Amazon scored 52/100 for your priorities."
+  },
+  {
+   "eventId": "evt_993da5d7-2e56-4409-af20-78f92031c058_evl_prism",
+   "sessionId": "ses_993da5d7-2e56-4409-af20-78f92031c058",
+   "sequence": 35,
+   "atMs": 182531,
+   "phase": "evaluate",
+   "type": "OFFER_EVALUATED",
+   "sellerId": "prism",
+   "payload": {
+    "offerId": "off_73fc3266-92ba-42ac-9b4f-f0648b2c3839",
+    "score": 53,
+    "reason": "eligible"
+   },
+   "feedText": "Best Buy scored 53/100 for your priorities."
+  },
+  {
+   "eventId": "evt_993da5d7-2e56-4409-af20-78f92031c058_evl_vertex",
+   "sessionId": "ses_993da5d7-2e56-4409-af20-78f92031c058",
+   "sequence": 36,
+   "atMs": 182536,
+   "phase": "evaluate",
+   "type": "SELLER_REJECTED",
+   "sellerId": "vertex",
+   "payload": {
+    "offerId": "off_78f42232-621e-4c93-9065-9659a7f99351",
+    "reasonCode": "over_budget"
+   },
+   "feedText": "eBay was set aside: over_budget."
+  },
+  {
+   "eventId": "evt_993da5d7-2e56-4409-af20-78f92031c058_final_buyer",
+   "sessionId": "ses_993da5d7-2e56-4409-af20-78f92031c058",
+   "sequence": 37,
+   "atMs": 182541,
+   "phase": "evaluate",
+   "type": "BUYER_DECISION",
+   "sellerId": null,
+   "payload": {
+    "final": true,
+    "offerId": "off_73fc3266-92ba-42ac-9b4f-f0648b2c3839",
+    "source": "llm",
+    "model": "gemini-3.5-flash",
+    "latencyMs": 2322
+   },
+   "feedText": "Your agent's choice: Selected Best Buy's Wireless ANC Headphones Premium edition at €332.00 total with free shipping, 4-day delivery, and a 36-month warranty."
+  },
+  {
+   "eventId": "evt_993da5d7-2e56-4409-af20-78f92031c058_winner",
+   "sessionId": "ses_993da5d7-2e56-4409-af20-78f92031c058",
+   "sequence": 38,
+   "atMs": 182546,
+   "phase": "complete",
+   "type": "WINNER_SELECTED",
+   "sellerId": "prism",
+   "payload": {
+    "offerId": "off_73fc3266-92ba-42ac-9b4f-f0648b2c3839",
+    "reason": "buyer_agent_choice_validated"
+   },
+   "feedText": "Best match for your preferences: Best Buy at €332.00."
+  },
+  {
+   "eventId": "evt_993da5d7-2e56-4409-af20-78f92031c058_complete",
+   "sessionId": "ses_993da5d7-2e56-4409-af20-78f92031c058",
+   "sequence": 39,
+   "atMs": 182551,
+   "phase": "complete",
+   "type": "NEGOTIATION_COMPLETE",
+   "sellerId": null,
+   "payload": {
+    "recommendedOfferId": "off_73fc3266-92ba-42ac-9b4f-f0648b2c3839",
+    "outcome": "ok"
+   },
+   "feedText": "Negotiation complete. Review the deal before paying."
+  }
+ ],
+ "offers": [
+  {
+   "offerId": "off_4d8fb71f-65a8-414d-b325-ef98176a1767",
+   "sellerId": "nova",
+   "initialPriceCents": 27990,
+   "finalPriceCents": 25490,
+   "eligible": true
+  },
+  {
+   "offerId": "off_c27302ba-3e09-4ca9-a891-a9dc112d8d7d",
+   "sellerId": "orbit",
+   "initialPriceCents": 31900,
+   "finalPriceCents": 29900,
+   "eligible": true
+  },
+  {
+   "offerId": "off_73fc3266-92ba-42ac-9b4f-f0648b2c3839",
+   "sellerId": "prism",
+   "initialPriceCents": 34900,
+   "finalPriceCents": 33200,
+   "eligible": true
+  },
+  {
+   "offerId": "off_78f42232-621e-4c93-9065-9659a7f99351",
+   "sellerId": "vertex",
+   "initialPriceCents": 37390,
+   "finalPriceCents": 36390,
+   "eligible": false
+  }
+ ]
+}
