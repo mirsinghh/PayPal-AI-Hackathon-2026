@@ -193,7 +193,7 @@ function supabaseBackend(url: string, key: string): Backend {
       return (await selectData<T>(TABLE[kind], `id=eq.${enc(id)}&limit=1`))[0] ?? null;
     },
     async saveDoc(kind, doc) {
-      await post(TABLE[kind], docRow(doc));
+      await post(TABLE[kind], docRow(kind, doc));
     },
     async listDocs<T>(kind: DocKind, ownerId: string) {
       return selectData<T>(TABLE[kind], `user_id=eq.${enc(ownerId)}&order=updated_at.desc&limit=200`);
@@ -210,7 +210,15 @@ function supabaseBackend(url: string, key: string): Backend {
   };
 }
 
-const docRow = (d: DocRow): Record<string, unknown> => ({ id: d.id, user_id: d.ownerId, session_id: d.sessionId ?? null, status: d.status, data: d.data, updated_at: d.updatedAt });
+// Only purchase_mandates has a session_id column. Sending it to payment_methods makes PostgREST reject the whole write.
+export const docRow = (kind: DocKind, d: DocRow): Record<string, unknown> => ({
+  id: d.id,
+  user_id: d.ownerId,
+  ...(kind === "mandates" ? { session_id: d.sessionId ?? null } : {}),
+  status: d.status,
+  data: d.data,
+  updated_at: d.updatedAt,
+});
 
 let backend: Backend | undefined;
 function db(): Backend {

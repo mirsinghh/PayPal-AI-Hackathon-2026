@@ -15,6 +15,13 @@ vi.stubGlobal(
 afterAll(() => vi.unstubAllGlobals());
 
 describe("Supabase store", () => {
+  it("writes each Auto-Buy table with exactly its own columns (payment_methods has no session_id)", async () => {
+    const { docRow } = await import("@/server/db/store");
+    const doc = { id: "pm_1", ownerId: "u1", sessionId: "ses_1", status: "pending", data: {}, updatedAt: "2026-01-01T00:00:00Z" };
+    expect(Object.keys(docRow("payment_methods", doc)).sort()).toEqual(["data", "id", "status", "updated_at", "user_id"]);
+    expect(Object.keys(docRow("mandates", doc)).sort()).toEqual(["data", "id", "session_id", "status", "updated_at", "user_id"]);
+  });
+
   it("upserts sessions with the secret key in a header only", async () => {
     const { saveSession } = await import("@/server/db/store");
     await saveSession({ sessionId: "ses_1", expiresAt: "2026-01-01T00:00:00Z" } as never);
