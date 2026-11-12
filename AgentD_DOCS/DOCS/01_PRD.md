@@ -1,10 +1,10 @@
 # 01 — Product Requirements Document (PRD)
 
-**Producto:** AgentDeal · **Release:** V0 hackathon · **Propietario:** Product Lead · **Estado:** lista para construir.
+**Producto:** AgentD · **Release:** V0 hackathon · **Propietario:** Product Lead · **Estado:** lista para construir.
 
 ## 1. Resumen
 
-AgentDeal demuestra cómo una persona puede delegar la comparación y negociación de una compra a un asistente de IA. La búsqueda conduce a cuatro vendedores **ficticios** con políticas distintas. El sistema genera ofertas creíbles como escenario hipotético, negocia concesiones limitadas, evalúa criterios del usuario y presenta una elección verificable antes de solicitar una orden de prueba de PayPal.
+AgentD demuestra cómo una persona puede delegar la comparación y negociación de una compra a un asistente de IA. La búsqueda conduce a cuatro vendedores **ficticios** con políticas distintas. El sistema genera ofertas creíbles como escenario hipotético, negocia concesiones limitadas, evalúa criterios del usuario y presenta una elección verificable antes de solicitar una orden de prueba de PayPal.
 
 **Visión:** pasar de «buscar y comparar por cuenta propia» a «declarar intención, dejar negociar y aprobar».
 

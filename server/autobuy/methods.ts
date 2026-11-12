@@ -68,7 +68,7 @@ export async function startAuthorization(ownerId: string, vault: VaultGateway = 
       requestId: methodId,
       returnUrl: `${baseUrl()}/api/auto-buy/payment-method/return?m=${methodId}`,
       cancelUrl: `${baseUrl()}/api/auto-buy/payment-method/return?m=${methodId}&cancelled=1`,
-      description: "Let AgentDeal Agent D pay with this PayPal account within purchase limits you set (Sandbox).",
+      description: "Let AgentD Agent D pay with this PayPal account within purchase limits you set (Sandbox).",
     });
   } catch (e) {
     if (e instanceof PayPalHttpError && (e.status === 401 || e.status === 403)) {

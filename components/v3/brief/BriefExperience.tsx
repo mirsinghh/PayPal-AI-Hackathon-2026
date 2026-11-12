@@ -20,7 +20,7 @@ import { AiUnavailableNotice, isTemporaryAiReason } from "@/components/v5/AiNoti
 import { MandatePanel } from "@/components/v5/autobuy/MandatePanel";
 import { useAutoBuyStatus } from "@/lib/v5/use-autobuy";
 
-const DRAFT_KEY = "agentdeal:brief-draft";
+const DRAFT_KEY = "agentd:brief-draft";
 type BannerState = { tone: "success" | "warn" | "danger" | "info"; text: string };
 const RETURN_NOTICE: Record<string, BannerState> = {
   ready: { tone: "success", text: "PayPal confirmed your authorisation. Review the mandate below and confirm it to turn on Agent Auto-Buy." },

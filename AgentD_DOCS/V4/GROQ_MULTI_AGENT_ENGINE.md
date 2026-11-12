@@ -1,6 +1,6 @@
-# Groq multi-agent engine (AgentDeal V4)
+# Groq multi-agent engine (AgentD V4)
 
-AgentDeal can now run its multi-agent negotiation on **Groq** as well as on Gemini, chosen by configuration only. Gemini is untouched and remains the default. The commercial and financial logic (catalogue, reserve prices, concession limits, validators, ranking, approval, PayPal) is shared and unchanged.
+AgentD can now run its multi-agent negotiation on **Groq** as well as on Gemini, chosen by configuration only. Gemini is untouched and remains the default. The commercial and financial logic (catalogue, reserve prices, concession limits, validators, ranking, approval, PayPal) is shared and unchanged.
 
 Backup taken before this work: `..\paypal-AI-hackaton_BACKUP_V4_20261112-162146\` (private; see its `BACKUP_MANIFEST.md`).
 

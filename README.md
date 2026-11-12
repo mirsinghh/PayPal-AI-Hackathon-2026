@@ -1,127 +1,196 @@
-# Agent D
+<p align="center">
+  <img src="AgentD_V3_HQ_Animaciones/gifs/idle.gif" alt="Agent D, the buyer agent" width="120" />
+</p>
 
-**Agent D, it always gets you the best deal.**
+<h1 align="center">AgentD</h1>
 
-_Best among the four simulated demo stores Agent D compares, not necessarily the whole market. "AgentDeal" is the project's earlier working name: it remains in technical identifiers (package, storage keys, docs folder) so existing data keeps working._
+<p align="center"><strong>Agent D, it always gets you the best deal.</strong><br/>
+An AI buyer agent that negotiates with four store agents, brings back competing offers, and pays with <b>PayPal Sandbox</b> only after you approve one exact offer.</p>
 
-Agent D is an agentic-commerce demo built for the PayPal AI Hackathon. You tell **Agent D**, an animated buyer agent, what you want and your budget. It negotiates with four store agents, explains what it achieved, and brings back competing offers. You approve one exact offer, then pay with **PayPal Sandbox**. AI proposes, the server validates, a human decides.
+<p align="center">
+  <a href="https://paypal-ai-hackathon-2026-pied.vercel.app/"><b>Live demo</b></a> ·
+  <a href="https://github.com/mirsinghh/PayPal-AI-Hackathon-2026">Repository</a> ·
+  <a href="#run-it-locally">Run locally</a> ·
+  <a href="LICENSE">MIT license</a>
+</p>
 
-> **Everything here is a simulation.** The four stores (Brisa Outlet, Zefiro Express, Atelier Norden, Korvan Direct) are fictional: their offers, prices, stock and terms are invented and they are not affiliated with any real company. Agent D does **not** negotiate with real merchants. Nothing ships. Payments run **only on PayPal Sandbox** (the server refuses any other environment).
+> **Everything is a simulation.** The four stores (Brisa Outlet, Zefiro Express, Atelier Norden, Korvan Direct) are fictional; their prices, stock and terms are invented. Nothing ships and no real money moves: the server refuses any PayPal environment other than **Sandbox**. "Best deal" means best among those four simulated stores, not the whole market.
 
-## What a user can do (V5)
+## The idea in one line
 
-1. Read the landing, watch the recorded negotiation demo (no AI calls, not saved, no account needed).
-2. Create an account or sign in (Supabase Auth). Accounts are optional: guests can negotiate and pay too.
-3. Describe a purchase and a budget. Agent D reads it back.
-4. **Choose how the stores reply**: `Server Rules` or `AI Agents` (below).
-5. Watch the negotiation room, compare the offers in the Decision Lab, approve one.
-6. Pay with PayPal Sandbox.
-7. Come back to **History / Profile** to see requests, analyses, negotiations, payments and savings.
+**AI proposes, the server validates, a human decides.**
 
-## Two ways for the stores to reply
+```mermaid
+flowchart LR
+    U["You: what + budget"] --> A["Agent D<br/>(buyer agent)"]
+    A <-->|"counter-offers"| S["4 store agents<br/>(own strategy + price floor)"]
+    S --> V{"Server validator<br/>price floor · no increases<br/>concession caps · budget"}
+    V -->|"valid"| O["Ranked offers<br/>+ explanation"]
+    V -->|"rejected: recorded, never applied"| S
+    O --> H{"You approve<br/>ONE exact offer"}
+    H -->|"approved"| P["PayPal Sandbox<br/>create → pay → capture"]
+    P --> R["Server-verified receipt"]
+```
 
-A segmented switch on the brief screen. It is chosen **before** the negotiation, sent to the server, validated there (`responseMode: "server" | "ai"`), recorded on the session and **fixed for that negotiation**. It never changes the request analysis.
+## What you can do
 
-| | Server Rules | AI Agents |
+1. Describe a purchase and a budget in plain words; Agent D reads it back (product, budget, priority, preferences).
+2. Pick **how the stores reply** (see below).
+3. Watch the **Negotiation Room**: per-store chat threads, price cards, and a panel explaining how Agent D is deciding.
+4. Compare offers in the **Decision Lab**, read what Agent D achieved (opening vs final price, savings under budget, trade-offs against the runner-up), and approve one.
+5. Pay with **PayPal Sandbox**. The page ends on **Capture confirmed** only after the server has verified the capture.
+6. Sign in (optional, Supabase Auth) to keep **History / Profile**: requests, analyses, negotiations, payments, savings. Guests can do everything except keep cross-device history.
+
+### Two ways for the stores to reply
+
+Chosen before the negotiation, validated and fixed on the server for that session.
+
+| | **Server Rules** | **AI Agents** |
 |---|---|---|
-| Who writes the replies | Deterministic backend rules (`server/negotiation/*`) | Real model agents: Agent D + four store agents with private strategies and memory (`server/agents/*`) |
-| Model calls for replies | **None** | Yes, on the configured provider (Groq or Gemini) |
-| Commercial limits | Store policy, price floor, discount caps, budget | The same: every model proposal is validated by the server (reserve price, no price increases, concession caps, amount grounding). Rejected proposals are recorded, never applied |
-| If it cannot run | n/a | The session records why (`fallbackReason`) and the UI says "You chose AI Agents, but AI could not run (…). The stores answered with backup server rules, not AI." Per-turn failures become labelled `Rules fallback` messages, and a mixed run says how many turns each engine wrote |
-| Needs | nothing | a provider key and quota (`/api/config` tells the UI if it is available) |
+| Who writes the replies | Deterministic engine (`server/negotiation/*`) | Model agents: 1 buyer + 4 sellers, each with a private persona and memory (`server/agents/*`) |
+| Models (Groq) | none | buyer `openai/gpt-oss-120b`, sellers `openai/gpt-oss-20b` |
+| Limits | store policy, floor, discount caps, budget | **the same**; every model proposal is checked by the server before it counts |
+| If a model fails | n/a | that turn becomes a labelled `Rules fallback`; the UI never shows a fallback as AI |
 
-**Analysis is independent.** The only model-written "analysis" is the explanation of the server-chosen winner (`server/ai/explain.ts`). It uses `ANALYSIS_PROVIDER` (default `AI_PROVIDER`); the replies use `NEGOTIATION_PROVIDER` (default `AI_PROVIDER`). The switch touches neither. See `AgentDeal_DOCS/V5/AUDIT.md` for the call-graph audit of who calls which provider.
+The only other model-written text is the explanation of the winner (`server/ai/explain.ts`), which is independent of the mode.
+
+## How a purchase is secured
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant B as Browser
+    participant S as Next.js API (server)
+    participant P as PayPal Sandbox
+    B->>S: POST /api/negotiations (request, budget, mode)
+    S-->>B: session + events (rules replayed / AI polled live)
+    B->>S: POST /api/negotiations/:id/approve
+    Note over S: offer must be recommended, eligible, unexpired
+    B->>S: POST /api/paypal/orders (no amount sent)
+    S->>P: Create order: amount from the approved offer, idempotent PayPal-Request-Id
+    P-->>B: Buyer approves in PayPal's own UI
+    B->>S: POST /api/paypal/orders/:id/capture
+    S->>P: Capture
+    Note over S: verify status, currency, amount and custom_id match the approved offer
+    S-->>B: Capture confirmed (order id, capture id)
+```
+
+The browser never sends a price. The server also never trusts a model for money: sellers' reserve prices, per-round concession caps and "no price increases" are enforced in code (`server/agents/validate.ts`).
 
 ## Architecture
 
-```
-Browser (Next.js 16 App Router, React 19, Tailwind 4)
- ├─ app/                     V5 pages: /, /brief, /negotiation/[id], /deals/[id], /checkout/[id], /activity, /login, /signup, /profile, /history
- │    components/v3         design system, Agent D mascot, brief, deal, checkout, recorded-demo screens (kept from V3)
- │    components/v4         Negotiation Room, conversation, Decision Lab (kept from V4)
- │    components/v5         header/footer, auth, response-mode switch, landing sections, profile/history
- └─ app/api/*               REST: negotiations, approve, paypal orders/capture, config, auth/*, history
-Server
- ├─ server/negotiation/*    deterministic engine (scenario, policies, validator, ranking, events) + engine choice
- ├─ server/agents/*         multi-agent engine (Agent D + 4 sellers), validators, event recorder
- ├─ server/ai/*             providers (Groq, Gemini, rules), explanation of the winner
- ├─ server/auth/*           Supabase Auth over REST, httpOnly-cookie sessions, ownership guard
- ├─ server/paypal/*         Sandbox client, create/capture with idempotency and amount verification
- └─ server/db/*             JSON files (local) or Supabase (production), history reads through RLS
-shared/contracts/types.ts   contracts between server and UI (money = integer EUR cents)
-supabase/schema.sql         tables, columns, profiles, Row Level Security
+```mermaid
+flowchart TB
+    subgraph Browser["Browser: Next.js 16 App Router, React 19, Tailwind 4"]
+        UI["/ · /brief · /negotiation/[id] · /deals/[id] · /checkout/[id] · /history · /profile"]
+    end
+    subgraph Server["Server: route handlers"]
+        NEG["negotiation/*<br/>rules engine, ranking, validator"]
+        AG["agents/*<br/>buyer + 4 sellers, schemas, recorder"]
+        AI["ai/*<br/>Groq · Gemini · rules, winner explanation"]
+        PP["paypal/*<br/>Sandbox client, idempotent orders, capture check"]
+        AU["auth/*<br/>Supabase Auth, httpOnly cookies, ownership guard"]
+        DB["db/*<br/>JSON files (local) or Supabase (prod)"]
+    end
+    UI -->|"REST /api/*"| NEG
+    NEG --> AG --> AI
+    UI --> PP
+    UI --> AU
+    NEG --> DB
+    PP --> DB
+    AI -->|"HTTPS"| GROQ[("Groq API")]
+    PP -->|"HTTPS"| PAYPAL[("PayPal Sandbox")]
+    AU --> SUPA[("Supabase<br/>Postgres + Auth + RLS")]
+    DB --> SUPA
 ```
 
-Key flow: `POST /api/negotiations` (intent + `responseMode`) → engine runs (rules: events computed up front and replayed; AI: events persisted live and polled) → `GET` session → `POST …/approve` (recommended, eligible, unexpired offer only) → `POST /api/paypal/orders` (amount from the approved offer; the browser never sends a price) → PayPal approval in the browser → `POST …/capture` (server verifies status, currency, amount, `custom_id`).
+Money is always integer EUR cents (`shared/contracts/types.ts`). Event log of every negotiation is persisted, so the UI only shows activity the backend recorded.
+
+## Tools and services used
+
+| Tool | How it is used |
+|---|---|
+| **PayPal Sandbox** (REST Orders v2 + JS SDK v6) | The whole payment path: server creates the order from the stored offer, the buyer approves in PayPal, the server captures and verifies status/currency/amount. Sandbox-only guard in `server/paypal/client.ts`. |
+| **Groq** · `openai/gpt-oss-120b`, `openai/gpt-oss-20b` | AI Agents mode: Agent D (120B) and the four store agents (20B) with structured JSON output (strict JSON Schema); also writes the winner explanation. |
+| **Google Gemini** (optional) | Alternative provider behind the same adapter (`AI_PROVIDER=gemini`). |
+| **Supabase** | Auth (email + password), Postgres storage, Row Level Security so users only read their own history. |
+| **Next.js 16, React 19, Tailwind 4, Zod, Vitest** | App, API routes, validation of every model output and request, tests. |
+| **Vercel** | Hosting of the public demo. |
+| **Claude Code** | Used as an AI pair-programmer to build and test the project. |
 
 ## Run it locally
 
+Requires Node.js 20.9+ (developed on Node 24).
+
+**Fastest path (no AI key, no Supabase):** negotiations run on server rules and data is stored in `./.data`.
+
 ```bash
 npm install
-cp .env.example .env.local      # fill in the values below
-npm run dev                     # http://localhost:3000
+cp .env.example .env.local
+# edit .env.local:  PAYPAL_ENV=sandbox · PAYPAL_CLIENT_ID · PAYPAL_CLIENT_SECRET · AI_PROVIDER=rules
+npm run dev            # http://localhost:3000
 ```
 
-| Variable | Needed for | Notes |
-|---|---|---|
-| `PAYPAL_ENV=sandbox`, `PAYPAL_CLIENT_ID`, `PAYPAL_CLIENT_SECRET` | payments | A PayPal **Sandbox** REST app. Only the client ID reaches the browser. |
-| `AI_PROVIDER` | AI | `groq`, `gemini` or `rules` (no model API). Default `gemini`. |
-| `ANALYSIS_PROVIDER`, `NEGOTIATION_PROVIDER` | AI | Optional per-role overrides, default `AI_PROVIDER`. |
-| `GROQ_API_KEY` (+ `GROQ_*` tuning) / `AI_API_KEY`, `AI_MODEL` | AI | Groq (GPT-OSS 120B buyer, 20B sellers) / Google Gemini. Without a key the app runs fully on labelled rule-based fallbacks and "AI Agents" shows as unavailable. |
-| `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY` | accounts + production storage | All server-only. Empty = JSON files in `./.data` and **no accounts**. |
-| `MULTI_AGENT_NEGOTIATION` | legacy default | Only the default for API callers that send no `responseMode`. The UI always sends one. |
-| `MULTI_AGENT_DEADLINE_MS`, `MULTI_AGENT_MAX_CALLS`, `AI_RPM_LIMIT`, `GROQ_MAX_CONCURRENCY` | pacing | See `.env.example` and `AgentDeal_DOCS/V4/GROQ_MULTI_AGENT_ENGINE.md`. |
+Create a free **Sandbox REST app** at [developer.paypal.com](https://developer.paypal.com) for the client id/secret, and a Sandbox **personal** account to pay with (never a real account). Without PayPal keys everything works except the final payment.
 
-Local data lives in `./.data` (git-ignored). **Never commit `.env.local`.**
+**Full path (AI Agents + accounts):** also set `AI_PROVIDER=groq` + `GROQ_API_KEY`, and the three `SUPABASE_*` variables after running `supabase/schema.sql` in the Supabase SQL editor (idempotent; in Authentication → Email you may switch "Confirm email" off for a smoother demo). Check a setup without printing secrets: `npm run check:env`.
 
-### Supabase (accounts, history, production storage)
+| Variable | Purpose |
+|---|---|
+| `PAYPAL_ENV=sandbox`, `PAYPAL_CLIENT_ID`, `PAYPAL_CLIENT_SECRET` | Payments (anything but `sandbox` disables them) |
+| `AI_PROVIDER` | `groq`, `gemini` or `rules` (no model API) |
+| `GROQ_API_KEY` / `AI_API_KEY` | Model provider key; missing = AI Agents shown as unavailable, Server Rules still work |
+| `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY` | Accounts and production storage. Empty = local JSON files and no accounts |
+| `APP_BASE_URL` | Public URL (only Auto-Buy uses it) |
 
-1. Create a Supabase project. In **SQL editor** run `supabase/schema.sql` (idempotent).
-2. **Authentication → Providers → Email**: keep it enabled. For a frictionless demo, turn **Confirm email** off; otherwise new users must confirm from their inbox before the first sign-in (the UI handles both).
-3. **Project settings → API**: copy the project URL, the **anon/publishable** key and the **service_role/secret** key into `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY` (Vercel: Project → Settings → Environment Variables). None is `NEXT_PUBLIC_*`: the browser never talks to Supabase.
-4. Optional demo account, created with the Admin API so no credential lives in the repo:
-   ```bash
-   SUPABASE_URL=... SUPABASE_SERVICE_ROLE_KEY=... DEMO_USER_EMAIL=demo@example.test DEMO_USER_PASSWORD='choose-a-demo-password' node scripts/create-demo-user.mjs
-   ```
+Every variable is server-only; there is no `NEXT_PUBLIC_*`. Full reference and the Vercel recipe: [`AgentD_DOCS/V5/VERCEL_DEPLOYMENT.md`](AgentD_DOCS/V5/VERCEL_DEPLOYMENT.md). Never commit `.env.local`.
 
-Security model: passwords are handled only by Supabase Auth (never stored, hashed or logged here). The session lives in `httpOnly` cookies; every API call re-verifies the token with Supabase, and the owner of a negotiation is taken from that verified token, **never from the request body**. RLS is on for every table; users can only `select` their own rows (`auth.uid() = user_id`), have no insert/update/delete policy, and the history API reads with the user's own token. A negotiation owned by a user is invisible (404) to everyone else, including for approval and payment. Guest negotiations stay reachable by their unguessable id, as before.
+### Try the happy path
 
-### PayPal Sandbox
+`/` → **Start Negotiating** → e.g. *"Wireless headphones with noise cancelling, up to €300"* → choose **AI Agents** (or Server Rules) → watch the room → **Approve this offer** → pay with a Sandbox personal account → **Capture confirmed** → **History**.
 
-Create a Sandbox REST app at developer.paypal.com, put its client id and secret in `.env.local`, and create a Sandbox **personal** account to pay with (never use a real account). The checkout uses the PayPal JS SDK v6 + Orders v2; the server creates and captures orders and verifies the capture.
-
-## Test the project
+## Tests
 
 ```bash
-npm test            # vitest: 342 tests (engines, validators, payments, response mode, auth/ownership, Groq adapter, view models)
+npm test            # 445 tests: engines, validators, payments, response mode, auth/ownership, Groq adapter, UI models
 npm run typecheck
 npm run lint
 npm run build
 ```
 
-Manual end-to-end (Sandbox): open `/`, watch the demo, **Start Negotiating**, pick a mode, **Start negotiating**, review the offers, **Approve this offer**, pay with the PayPal button using a Sandbox personal account, and check the verified-path card ends on **Capture confirmed** (order id, capture id, amount compared with the approved offer). Then open **History**.
-
-## What is real, what is simulated
+## What is real and what is simulated
 
 | | |
 |---|---|
-| **Real** | PayPal Sandbox orders created and captured through the PayPal API; the payable amount is set on the server; human approval is enforced server-side; every price is validated against the store policy and your budget. |
-| **Real (opt-in)** | With **AI Agents**, Agent D and the four stores are real model agents with separate contexts; outputs are validated (schema, reserve price, no increases, concession caps, amount grounding). |
-| **Real** | Accounts (Supabase Auth), ownership and RLS. |
-| **Simulated** | The merchants, inventory, delivery and terms. In **Server Rules** the negotiation itself is a deterministic rule engine and the screen is a replay of that run (and says so). The landing demo is a recorded run: no model, no session, not saved. |
+| **Real** | PayPal Sandbox orders and captures; the payable amount is set and verified on the server; human approval enforced server-side; Supabase Auth, ownership and RLS. |
+| **Real (AI Agents mode)** | Agent D and the four stores are real model calls with separate contexts, with every output validated (schema, reserve price, no increases, concession caps, amount grounding). |
+| **Simulated** | The merchants, inventory, delivery and terms. In Server Rules the negotiation is a deterministic engine and the screen says it is a replay. The landing demo is a recorded run (no model, not saved). |
 
-The UI never shows activity the backend did not record. A fallback is never presented as AI.
+## Agent Auto-Buy (experimental, off by default)
 
-## Docs
+An opt-in mode where Agent D pays by itself inside a spending mandate you confirm (budget cap, one purchase, 30 minutes, cancel window). It is implemented and unit-tested, but it needs PayPal's **Vault** permission, which the Sandbox app does not have yet, so the app shows it as *unavailable* with the reason. Manual Checkout is the supported path. Details: [`AgentD_DOCS/V5/AUTO_BUY.md`](AgentD_DOCS/V5/AUTO_BUY.md).
 
-`AgentDeal_DOCS/V5/` (audit, V5 design, demo script) · `AgentDeal_DOCS/V4/` (Negotiation Room, Groq engine) · `AgentDeal_DOCS/V3/` (design system, mascot, UX flows) · older specs in `AgentDeal_DOCS/DOCS/` (Spanish). V3/V4 docs describe screens that now live under the V5 routes; the original standalone V1–V4 UIs are preserved on the `archive/agentdeal-v1-v4` branch.
+## Repository layout
+
+```
+app/            pages and /api route handlers
+components/     v3 design system + mascot, v4 negotiation room + Decision Lab, v5 landing/auth/history
+server/         negotiation, agents, ai, auth, paypal, autobuy, db
+shared/         contracts (types, money as integer cents), brand
+supabase/       schema.sql (tables + RLS)
+tests/          Vitest suites
+AgentD_DOCS/    design and audit docs (V3 to V5)
+AgentD_V3_HQ_Animaciones/   Agent D sprite pack
+```
+
+The original V1–V4 UIs are preserved on the `archive/agentdeal-v1-v4` branch.
 
 ## Known limits
 
-- In-memory rate limiter, run cap and token-bucket gates are per server instance.
-- AI quality and latency depend on the provider plan; the stores' tone has only been exercised on a few real runs.
-- Without a Supabase project there are no accounts or cross-device history (local activity stays in the browser).
+- Rate limiter, run cap and token buckets are per server instance.
+- AI quality and latency depend on the Groq plan; if the provider is rate-limited, the session falls back to server rules and says so.
+- Without Supabase there are no accounts or cross-device history.
 
 ## License
 
-MIT, see `LICENSE`. Agent D artwork comes from the project's own asset pack; store names are used only as labels (see the trademark note in `LICENSE`).
+MIT, see [`LICENSE`](LICENSE). Agent D artwork is the project's own asset pack; store names are fictional labels (see the trademark note in `LICENSE`).

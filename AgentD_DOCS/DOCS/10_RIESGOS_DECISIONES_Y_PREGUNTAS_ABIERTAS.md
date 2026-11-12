@@ -31,7 +31,7 @@
 
 | ID | Decisión | Motivo | Alternativa descartada | Revisión |
 |---|---|---|---|---|
-| D01 | Marca provisional **AgentDeal** | Evitar sugerir producto oficial PayPal | «PayPal AI Marketplace» como marca principal | Antes de publicar |
+| D01 | Marca provisional **AgentD** | Evitar sugerir producto oficial PayPal | «PayPal AI Marketplace» como marca principal | Antes de publicar |
 | D02 | Vendedores siempre simulados | Demo verificable sin acuerdos con comercios | Conectar sellers reales ahora | V2 |
 | D03 | Cuatro sellers fijos | Experiencia repetible y comparación visual | Número variable de agentes | V2 |
 | D04 | Orquestador por eventos; no cuatro LLM autónomos | Control, coste y tiempos predecibles | Multiagente totalmente autónomo | V2 |
@@ -64,7 +64,7 @@
 
 | ID | Pregunta | Propuesta por defecto | Fecha/condición para resolver | Bloquea V0 |
 |---|---|---|---|---|
-| Q01 | ¿Se mantiene AgentDeal como nombre? | Sí, provisional hasta publicar | Antes de vídeo/repo | No |
+| Q01 | ¿Se mantiene AgentD como nombre? | Sí, provisional hasta publicar | Antes de vídeo/repo | No |
 | Q02 | ¿Qué proveedor/modelo de IA? | Uno fiable con JSON estructurado y clave disponible | Antes B06 | **Sí para integración**, no para diseñar |
 | Q03 | ¿Qué navegador para grabar? | Chrome desktop reciente | Antes de pruebas vídeo | No |
 | Q04 | ¿Dónde desplegar? | Vercel + Supabase | Antes de B17 | No |

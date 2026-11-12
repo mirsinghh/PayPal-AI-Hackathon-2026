@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
-process.env.DATA_DIR = mkdtempSync(path.join(tmpdir(), "agentdeal-auth-"));
+process.env.DATA_DIR = mkdtempSync(path.join(tmpdir(), "agentd-auth-"));
 
 import { clearAuthCacheForTests, authFromRequest, parseCookies } from "@/server/auth/request";
 import { authConfigured, signIn, signUp, AuthError } from "@/server/auth/supabase";

@@ -18,7 +18,7 @@ export class PayPalNetworkError extends Error {}
 
 export function assertSandbox(): void {
   if (process.env.PAYPAL_ENV !== "sandbox") {
-    throw new Error("PAYPAL_ENV must be 'sandbox'. AgentDeal V0 never moves real money.");
+    throw new Error("PAYPAL_ENV must be 'sandbox'. AgentD V0 never moves real money.");
   }
   if (!process.env.PAYPAL_CLIENT_ID || !process.env.PAYPAL_CLIENT_SECRET) {
     throw new Error("PAYPAL_CLIENT_ID and PAYPAL_CLIENT_SECRET are required.");
@@ -166,7 +166,7 @@ export function createSetupToken(args: { requestId: string; returnUrl: string; c
           experience_context: {
             shipping_preference: "NO_SHIPPING",
             payment_method_preference: "IMMEDIATE_PAYMENT_REQUIRED",
-            brand_name: "AgentDeal (Sandbox)",
+            brand_name: "AgentD (Sandbox)",
             locale: "en-US",
             return_url: args.returnUrl,
             cancel_url: args.cancelUrl,

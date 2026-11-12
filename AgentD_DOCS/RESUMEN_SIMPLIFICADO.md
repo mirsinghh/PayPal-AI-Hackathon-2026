@@ -1,4 +1,4 @@
-# AgentDeal — Resumen simplificado
+# AgentD — Resumen simplificado
 
 **Versión:** 1.0 · **Fecha:** 2026-11-11 · **Estado:** Propuesta cerrada para MVP de hackathon  
 **Tagline:** *Stop searching. Start negotiating.*
@@ -11,7 +11,7 @@
 | **MVP (V0)** | Inputs de producto/presupuesto/preferencias; cuatro perfiles comerciales; ofertas y contraofertas simuladas y validadas; timeline animado; evaluación real con IA; explicación, aprobación y PayPal Checkout Sandbox; demo funcional y desplegada. |
 | **Futuro (V1)** | Reconocimiento de voz, transcripción editable, voz del agente, narración y respuestas de varios turnos (esta última como evolución). |
 | **Fuera de alcance** | Marketplace real, vendedores/inventario/logística externos, pagos multiparte, agentes autónomos persistentes, cuentas y compras con dinero real. |
-| **Supuestos** | Marca provisional AgentDeal; UI/copy en inglés; documentación en español; EUR; desktop-first y responsive; cuatro vendedores NOVA, ORBIT, PRISM y VERTEX; una oferta recomendada en cada escenario válido; recorrido guiado con contenido variable. |
+| **Supuestos** | Marca provisional AgentD; UI/copy en inglés; documentación en español; EUR; desktop-first y responsive; cuatro vendedores NOVA, ORBIT, PRISM y VERTEX; una oferta recomendada en cada escenario válido; recorrido guiado con contenido variable. |
 | **Riesgos** | Confundir simulación con ofertas de comercios reales; usar IA solo decorativa; inconsistencia de precios; fraude por importes manipulados; integración incompleta con PayPal; degradación de accesibilidad; soporte irregular de voz; poco tiempo de pruebas. |
 | **Preguntas críticas (no bloqueantes)** | Marca final, proveedor/modelo de IA, navegador de grabación y si el despliegue será Vercel + Supabase. Se asumen las opciones anteriores hasta decidirlo. |
 

@@ -1,6 +1,6 @@
 /*
- * AgentDeal design system ("playful premium fintech", introduced in V3, extended in V4/V5).
- * The single stylesheet of the app, imported by app/layout.tsx. Reference: AgentDeal_DOCS/V3/DESIGN_SYSTEM.md
+ * AgentD design system ("playful premium fintech", introduced in V3, extended in V4/V5).
+ * The single stylesheet of the app, imported by app/layout.tsx. Reference: AgentD_DOCS/V3/DESIGN_SYSTEM.md
  */
 @import "tailwindcss" source(none);
 @source "./";

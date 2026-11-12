@@ -17,7 +17,7 @@ export function encryptionKey(env: Env = process.env): Buffer | null {
   if (env.VERCEL || env.NODE_ENV === "production") return null;
   const secret = env.PAYPAL_CLIENT_SECRET;
   if (!secret || /^your-/i.test(secret)) return null;
-  return Buffer.from(hkdfSync("sha256", secret, "agentdeal-autobuy-dev", "payment-token-key", 32));
+  return Buffer.from(hkdfSync("sha256", secret, "agentd-autobuy-dev", "payment-token-key", 32));
 }
 
 const aad = (ownerId: string, methodId: string) => Buffer.from(`${ownerId}|${methodId}`);

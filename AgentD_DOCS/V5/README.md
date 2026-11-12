@@ -1,4 +1,4 @@
-# Agent D V5 (working name: AgentDeal)
+# AgentD V5
 
 V5 is the final version: the V3 explanatory landing and recorded demo, the V4 real negotiation flow, plus accounts, persistent history and a per-negotiation choice between **Server Rules** and **AI Agents**. Read `AUDIT.md` first (what called which provider before V5).
 

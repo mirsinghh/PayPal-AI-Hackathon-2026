@@ -1,4 +1,4 @@
-# AgentDeal V5 — Technical audit (before any V5 change)
+# AgentD V5 — Technical audit (before any V5 change)
 
 Audit date: 2026-11-12, performed on branch `main` at `e61ec97` plus the uncommitted V4/Groq work. Baseline: `vitest` 24 files / **312 tests passing**.
 

@@ -1,6 +1,6 @@
 # Agent D — HQ Animation Pack V3
 
-Mascota seleccionada para **AgentDeal**: gorra azul con letra **D**, visor azul marino, cuerpo crema, mochila naranja y contorno de inspiración pixel art.
+Mascota seleccionada para **AgentD**: gorra azul con letra **D**, visor azul marino, cuerpo crema, mochila naranja y contorno de inspiración pixel art.
 
 ## Descubre el pack
 

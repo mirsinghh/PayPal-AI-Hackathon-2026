@@ -10,7 +10,7 @@
 | Home | Formulario clásico de 4 campos; no parecía un asistente. |
 | Negociación | Grafo SVG de 480×340 con texto de 12–17 px que se encogía a ~6 px en móvil; pulsos calculados a 100 ms; sin interacción. Cuatro tarjetas de vendedor repetían la misma información. |
 | Ofertas | Una tarjeta ganadora + tabla de 7 columnas con scroll horizontal en móvil. Sin diferencias entre ofertas. |
-| Producto | SVG oscuros con texto incrustado («Illustration · AgentDeal demo»). Las ofertas V0 no tenían imagen. |
+| Producto | SVG oscuros con texto incrustado («Illustration · AgentD demo»). Las ofertas V0 no tenían imagen. |
 | Seguridad (bundle) | Los componentes cliente importaban `server/agents/catalog.ts`, que contiene precios de reserva (`minPriceCents`) y personas de LLM. Ahora importan `shared/sellers.ts` (solo datos públicos). |
 | Accesibilidad | Sin skip link; foco por defecto; estados dependían del color en el grafo. |
 
@@ -29,10 +29,10 @@
 
 1. **Home (`/`)** — Hero breve + compositor conversacional. El presupuesto se extrae de la frase (`lib/request-parse.ts`, conservador: solo con `€`/`EUR`) y se muestra editable con la nota «Taken from your request». La línea de estado resume lo que se enviará (producto limpio, presupuesto, prioridad). Los ejemplos del placeholder son categorías que el catálogo demo sí cubre (no «iPhone»: no existe en el catálogo y V0 etiqueta las ofertas con el texto del usuario).
 2. **Negociación (`/negotiation/[id]`)** — ver §4.
-3. **Ofertas + aprobación (`/deals/[id]`)** — Recomendación con imagen, precio y 4 condiciones; panel «Step 1 of 2 · AgentDeal approval» (sticky en escritorio, justo tras la recomendación en móvil); «Why this offer» con origen (AI / rules); comparador de 4 tarjetas con filas idénticas, marcas neutras «Lowest price / Fastest / Longest» y diferencias aritméticas respecto a la recomendada (sin colores buenos/malos); reordenación animada por *Best match / Lowest price / Fastest* (las no elegibles siempre al final).
+3. **Ofertas + aprobación (`/deals/[id]`)** — Recomendación con imagen, precio y 4 condiciones; panel «Step 1 of 2 · AgentD approval» (sticky en escritorio, justo tras la recomendación en móvil); «Why this offer» con origen (AI / rules); comparador de 4 tarjetas con filas idénticas, marcas neutras «Lowest price / Fastest / Longest» y diferencias aritméticas respecto a la recomendada (sin colores buenos/malos); reordenación animada por *Best match / Lowest price / Fastest* (las no elegibles siempre al final).
 4. **Pago y confirmación (`/checkout/[id]`)** — «Step 2 of 2 · PayPal payment», resumen del pedido aprobado y botón oficial de PayPal (ancho completo, zona con altura reservada). Estados reales del SDK intactos. Confirmación: importe, estado, Order ID, Capture ID y resumen; aviso explícito de que **no hay envío ni seguimiento**.
 
-Diferenciación explícita: aprobar en AgentDeal «no mueve dinero»; el pago lo autoriza el usuario en PayPal.
+Diferenciación explícita: aprobar en AgentD «no mueve dinero»; el pago lo autoriza el usuario en PayPal.
 
 ## 4. Visualización de la negociación
 
@@ -73,7 +73,7 @@ Ilustraciones originales por categoría (`public/products/*.svg`, sin texto incr
 - El pago completo en PayPal Sandbox no se ha ejecutado desde esta sesión (requiere iniciar sesión con una cuenta Sandbox); se verificó hasta el botón oficial y la pantalla de confirmación con un pago ya completado en `.data`.
 - `prefers-reduced-motion` verificado por revisión de código, no con emulación del sistema.
 
-## 9. Motion system (aplicación de `AgentDeal_DOCS/SKILL.md`)
+## 9. Motion system (aplicación de `AgentD_DOCS/SKILL.md`)
 
 El skill está pensado para HTML/CSS/JS plano; aquí se adapta a Next + Motion for React conservando sus reglas. Los tokens viven en `app/globals.css` (`--ease`, `--ease-io`, `--d1 180ms`, `--d2 320ms`, `--d3 600ms`) y se reflejan en `lib/motion.ts`. Se sustituyó el set anterior (150/260 ms).
 
@@ -116,9 +116,9 @@ Reglas de CSS aprendidas: `.eyebrow` va en `@layer components` y el foco global 
 
 ## 11. Tercera pasada: diagrama de agentes y primera impresión (skill `hero-motion`)
 
-El skill `AgentDeal_DOCS/hero-motion/SKILL.md` describe un hero donde el producto *se ve funcionando* (capas: texto, atmósfera, escenario, demo viva). Se aplicó a AgentDeal respetando la regla de honestidad: **no se inventa actividad**.
+El skill `AgentD_DOCS/hero-motion/SKILL.md` describe un hero donde el producto *se ve funcionando* (capas: texto, atmósfera, escenario, demo viva). Se aplicó a AgentD respetando la regla de honestidad: **no se inventa actividad**.
 
-| Idea del skill | Aplicación en AgentDeal |
+| Idea del skill | Aplicación en AgentD |
 |---|---|
 | Demo viva en el hero | `components/home/SampleStage.tsx`: la home reproduce en bucle una **ejecución congelada del motor de reglas real** (`shared/sample-negotiation.ts`, semilla 42), siempre etiquetada «Sample run · pre-recorded, rule engine». `tests/sample-negotiation.test.ts` falla si el motor deja de producir exactamente esa salida. Se pausa fuera de pantalla y con la pestaña oculta; con reduced-motion muestra el estado final sin bucle. |
 | Ficha que se rellena sola | `DraftSlip` + `SlotRow`: cada fila es un esqueleto con shimmer hasta que ocurre el evento que la produce (tiendas, ofertas, «Lowest so far», «Recommended»). «Lowest so far» es aritmética sobre ofertas visibles, no recomendación; «Recommended» solo aparece con el evento `WINNER_SELECTED`. En el ejemplo, la más barata (Brisa) **no** es la recomendada (Atelier): explica «mejor valor ≠ más barato». Aparece también en la pantalla de negociación. |

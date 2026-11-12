@@ -35,7 +35,7 @@ Deadline: 12 Nov 2026, 12:00 PST (21:00 Spain).
 |---|---|---|---|
 | 13 | English README with architecture, configuration and test steps | **VERIFIED** | `README.md` rewritten. |
 | 14 | Public repository, open-source licence, reproducible instructions | **PENDING (needs you)** | `LICENSE` (MIT) added: **change it if you prefer another**. The folder is **not a git repository** and has no remote: create the public GitHub repo and push (`.env*` and `.data/` are already git-ignored). |
-| 15 | Video script under 3 minutes | **VERIFIED** | `AgentDeal_DOCS/V3/VIDEO_SCRIPT.md` (2:50, timings, narration, honest-engine rules, pre-recording checklist). The video itself is yours to record and upload. |
+| 15 | Video script under 3 minutes | **VERIFIED** | `AgentD_DOCS/V3/VIDEO_SCRIPT.md` (2:50, timings, narration, honest-engine rules, pre-recording checklist). The video itself is yours to record and upload. |
 | 16 | Public deployment reachable; no secrets in the browser | **PARTIAL** | Client bundle scanned: `PAYPAL_CLIENT_SECRET` and `AI_API_KEY` appear nowhere in `.next/static` or `public`; the browser only receives the public PayPal client ID. **Deployment not checked:** it needs Vercel + Supabase set up by you (`supabase/schema.sql`); give me the URL and I will test it. |
 
 ## Store names

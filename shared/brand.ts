@@ -1,7 +1,6 @@
 /**
- * Public identity. "Agent D" is the product name AND the buyer agent (the mascot). Technical identifiers keep the old
- * working name `agentdeal` on purpose (package, storage keys, tables, docs folder): renaming them would break existing
- * sessions and data for no user-visible gain.
+ * Public identity. The project is AgentD; "Agent D" is the buyer agent (the mascot) and the name the UI speaks with.
+ * Technical identifiers (package, storage keys, docs folder) use `agentd`.
  */
 export const BRAND = {
   name: "Agent D",

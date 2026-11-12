@@ -11,8 +11,8 @@ import { IconCheck, IconLock } from "@/components/v3/icons";
 
 /**
  * The Auto-Buy gate and the purchase mandate, in the order the user must satisfy them:
- *   1. signed in to AgentDeal  2. PayPal authorised (PayPal's own consent page)  3. this mandate, confirmed in words.
- * Logging in to AgentDeal never replaces PayPal's authorisation, and the toggle alone is never consent: the checkbox
+ *   1. signed in to AgentD  2. PayPal authorised (PayPal's own consent page)  3. this mandate, confirmed in words.
+ * Logging in to AgentD never replaces PayPal's authorisation, and the toggle alone is never consent: the checkbox
  * with the exact sentence is. The server re-checks all three; nothing here is trusted.
  */
 export function MandatePanel({

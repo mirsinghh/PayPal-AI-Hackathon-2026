@@ -5,7 +5,7 @@ import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 // Isolated store per test run; must be set before importing the store.
-process.env.DATA_DIR = mkdtempSync(path.join(tmpdir(), "agentdeal-agents-"));
+process.env.DATA_DIR = mkdtempSync(path.join(tmpdir(), "agentd-agents-"));
 
 import { getSession, saveSession } from "@/server/db/store";
 import { catalogItem, matchCategory, SELLER_PROFILES } from "@/server/agents/catalog";

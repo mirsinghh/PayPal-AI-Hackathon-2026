@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-process.env.DATA_DIR = mkdtempSync(path.join(tmpdir(), "agentdeal-mode-"));
+process.env.DATA_DIR = mkdtempSync(path.join(tmpdir(), "agentd-mode-"));
 
 import { resetRunSlotsForTests } from "@/server/agents/config";
 import type { ModelCaller } from "@/server/agents/model";

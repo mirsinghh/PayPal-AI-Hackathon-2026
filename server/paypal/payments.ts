@@ -113,7 +113,7 @@ export async function createPaymentOrder(
     try {
       const order = await gw.create({
         amountCents: attempt.amountCents,
-        description: `AgentDeal Sandbox test: ${offer.productLabel}`,
+        description: `AgentD Sandbox test: ${offer.productLabel}`,
         customId: attempt.paymentAttemptId,
         requestId: attempt.createRequestId,
       });
@@ -297,7 +297,7 @@ async function createAndSettle(attempt: PaymentAttempt, vaultId: string, label: 
   try {
     order = await gw.create({
       amountCents: attempt.amountCents,
-      description: `AgentDeal Sandbox Auto-Buy: ${label}`,
+      description: `AgentD Sandbox Auto-Buy: ${label}`,
       customId: attempt.paymentAttemptId,
       // Same PayPal-Request-Id on every retry: PayPal returns the original order instead of creating another.
       requestId: attempt.createRequestId,

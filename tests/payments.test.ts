@@ -5,7 +5,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 
 // Isolated store per test run; must be set before importing the store.
-process.env.DATA_DIR = mkdtempSync(path.join(tmpdir(), "agentdeal-"));
+process.env.DATA_DIR = mkdtempSync(path.join(tmpdir(), "agentd-"));
 
 import { prepareSession } from "@/server/negotiation/service";
 import { getSession, saveSession } from "@/server/db/store";

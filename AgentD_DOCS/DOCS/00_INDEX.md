@@ -1,11 +1,11 @@
 # 00 — Índice y guía de implementación
 
-**Proyecto:** AgentDeal · **Versión:** 1.0 · **Fecha:** 11/11/2026 · **Idioma del producto:** inglés · **Idioma de las especificaciones:** español.  
+**Proyecto:** AgentD · **Versión:** 1.0 · **Fecha:** 11/11/2026 · **Idioma del producto:** inglés · **Idioma de las especificaciones:** español.  
 **Estado:** especificación de MVP de demostración, no documentación de un producto comercial operativo.
 
 ## 1. Qué construimos
 
-AgentDeal es una web de compra asistida por IA. El usuario describe un producto y preferencias. Cuatro **agentes vendedores simulados** responden con ofertas y concesiones dentro de políticas predefinidas. Un agente comprador las evalúa mediante IA, un motor determinista comprueba elegibilidad y condiciones, y el usuario decide si pagar la oferta elegida mediante **PayPal Sandbox**. Todo el proceso se representa con una red animada de agentes y un feed de actividad.
+AgentD es una web de compra asistida por IA. El usuario describe un producto y preferencias. Cuatro **agentes vendedores simulados** responden con ofertas y concesiones dentro de políticas predefinidas. Un agente comprador las evalúa mediante IA, un motor determinista comprueba elegibilidad y condiciones, y el usuario decide si pagar la oferta elegida mediante **PayPal Sandbox**. Todo el proceso se representa con una red animada de agentes y un feed de actividad.
 
 **Principio de honestidad de producto:** «negociación» significa negociación **simulada y regida por políticas**, no contacto con comercios reales; «ahorro» es la diferencia entre precio inicial y final del mismo vendedor simulado, no ahorro frente a un precio real de mercado. «Mejor oferta» se refiere a las cuatro ofertas simuladas de esa sesión.
 
@@ -30,7 +30,7 @@ AgentDeal es una web de compra asistida por IA. El usuario describe un producto 
 
 | Clave | Decisión |
 |---|---|
-| Marca provisional | AgentDeal (no sugiere afiliación oficial con PayPal) |
+| Marca provisional | AgentD (no sugiere afiliación oficial con PayPal) |
 | Versiones | **V0 = MVP obligatorio**; **V1 = voz opcional**; **V2 = conversación multimodal y comercio real, fuera de hackathon** |
 | Pantallas | **S01 Discover**, **S02 Live Negotiation**, **S03 Best Deal**, **S04 Checkout & Confirmation** |
 | Vendedores | Exactamente **4**: NOVA (precio), ORBIT (entrega), PRISM (valor/garantía), VERTEX (negociación dura) |

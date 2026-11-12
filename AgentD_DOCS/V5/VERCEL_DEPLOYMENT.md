@@ -1,6 +1,6 @@
 # Agent D V5 — Vercel deployment
 
-Public name: **Agent D** ("Agent D, it always gets you the best deal."). The repository, package and database keep the technical name `agentdeal`; nothing technical was renamed.
+Public name: **Agent D** ("Agent D, it always gets you the best deal.").
 Scope of the demo: four **simulated** stores, offers compared only inside that simulated environment (not the whole market), payments in **PayPal Sandbox** only.
 
 Check any configuration (names and messages only, never values):

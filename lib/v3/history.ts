@@ -14,8 +14,8 @@ export interface HistoryEntry {
   budgetCents: number;
 }
 
-export const HISTORY_KEY = "agentdeal.v3.history";
-export const HISTORY_EVENT = "agentdeal:history";
+export const HISTORY_KEY = "agentd.v3.history";
+export const HISTORY_EVENT = "agentd:history";
 export const MAX_HISTORY = 20;
 
 const ID_RE = /^ses_[A-Za-z0-9_-]{1,80}$/;

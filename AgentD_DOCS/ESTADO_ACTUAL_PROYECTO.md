@@ -1,6 +1,6 @@
-# AgentDeal — Estado actual del proyecto (documento de contexto para un modelo de IA)
+# AgentD — Estado actual del proyecto (documento de contexto para un modelo de IA)
 
-**Fecha del snapshot:** 2026-11-12 · **Proyecto:** `paypal-AI-hackaton` · **Nombre de producto:** AgentDeal
+**Fecha del snapshot:** 2026-11-12 · **Proyecto:** `paypal-AI-hackaton` · **Nombre de producto:** AgentD
 **Tagline:** *Your AI agent negotiates. You decide.*
 **Contexto:** MVP para el hackathon de PayPal con IA. Todo es una **demo**: tiendas ficticias, pagos solo en **PayPal Sandbox**.
 
@@ -10,7 +10,7 @@
 
 ## 1. Resumen ejecutivo
 
-AgentDeal es un flujo de compra asistido por IA. El usuario describe en lenguaje natural lo que quiere comprar y su presupuesto; un **agente comprador** negocia con **cuatro tiendas ficticias**; el usuario ve en directo cada mensaje y oferta sobre un mapa animado, revisa **una sola oferta recomendada**, la **aprueba explícitamente** y paga con **PayPal Sandbox**.
+AgentD es un flujo de compra asistido por IA. El usuario describe en lenguaje natural lo que quiere comprar y su presupuesto; un **agente comprador** negocia con **cuatro tiendas ficticias**; el usuario ve en directo cada mensaje y oferta sobre un mapa animado, revisa **una sola oferta recomendada**, la **aprueba explícitamente** y paga con **PayPal Sandbox**.
 
 Principios de diseño del producto:
 
@@ -46,7 +46,7 @@ Principios de diseño del producto:
 - **Supabase** (Postgres vía REST, service role) en producción; ficheros JSON en local.
 - **Aviso importante (AGENTS.md):** este Next.js tiene cambios incompatibles con versiones conocidas; antes de escribir código hay que leer la guía en `node_modules/next/dist/docs/`.
 
-Scripts: `npm run dev | build | start | lint | test | typecheck`. Config de preview: `.claude/launch.json` (`agentdeal-dev` → `npm run dev`, puerto 3000).
+Scripts: `npm run dev | build | start | lint | test | typecheck`. Config de preview: `.claude/launch.json` (`agentd-dev` → `npm run dev`, puerto 3000).
 
 ## 4. Flujo de usuario (4 pantallas)
 
@@ -141,7 +141,7 @@ Todo el dinero son **céntimos enteros en EUR**. Tipos principales:
 
 ## 11. Diseño (UI / UX / motion)
 
-Referencia en `AgentDeal_DOCS/DOCS/04_DISENO_UI_Y_DESIGN_SYSTEM.md`, `05_MOTION_DESIGN.md`, `11_REDISENO_UX_UI.md`, `AgentDeal_DOCS/SKILL.md` y `hero-motion/SKILL.md`. Tokens reales en `app/globals.css`.
+Referencia en `AgentD_DOCS/DOCS/04_DISENO_UI_Y_DESIGN_SYSTEM.md`, `05_MOTION_DESIGN.md`, `11_REDISENO_UX_UI.md`, `AgentD_DOCS/SKILL.md` y `hero-motion/SKILL.md`. Tokens reales en `app/globals.css`.
 
 - **Light-first y sobrio.** Superficies: canvas `#fafaf8`, surface `#ffffff`, subtle `#f4f4f2`, líneas `#e4e4e7`/`#d4d4d8`, contorno de controles `#85858e` (3:1, WCAG 1.4.11). Texto `--ink #18181b`, `--ink-2 #66666f` (AA también sobre `--subtle`).
 - **Un único color de marca: azul navy PayPal `#003087`** (hover `#00266b`, soft `#eef2fa`), reservado a acciones primarias y estado activo. Colores semánticos (éxito `#15803d`, aviso `#92400e`, peligro `#b91c1c`, con soft/line) **solo para reportar estado real**. Foco `#003087`.
@@ -186,10 +186,10 @@ shared/              contratos, formato, productos, marcas de tiendas, sample-ne
 supabase/schema.sql  tablas con RLS
 tests/               vitest (9 archivos)
 public/products/     SVG de categorías
-AgentDeal_DOCS/      especificaciones (ES): PRD, funcionalidades, flujos, diseño, motion, arquitectura, datos/API, backlog, criterios, riesgos, rediseño
+AgentD_DOCS/      especificaciones (ES): PRD, funcionalidades, flujos, diseño, motion, arquitectura, datos/API, backlog, criterios, riesgos, rediseño
 ```
 
-## 16. Documentación existente (en español, `AgentDeal_DOCS/`)
+## 16. Documentación existente (en español, `AgentD_DOCS/`)
 
 `DOCS/00_INDEX.md` (índice), `01_PRD`, `02_FUNCIONALIDADES_Y_CARACTERISTICAS`, `03_FLUJOS_UX`, `04_DISENO_UI_Y_DESIGN_SYSTEM`, `05_MOTION_DESIGN`, `06_ARQUITECTURA_TECNICA`, `07_MODELO_DE_DATOS_Y_APIS`, `08_BACKLOG_PRIORIZADO`, `09_CRITERIOS_DE_ACEPTACION`, `10_RIESGOS_DECISIONES_Y_PREGUNTAS_ABIERTAS`, `11_REDISENO_UX_UI` (rediseño vigente), `RESUMEN_SIMPLIFICADO.md`, `SKILL.md` y `hero-motion/SKILL.md` (reglas de motion). **Atención:** parte de las specs 01–10 se escribieron antes de la Fase 2 (multi-agente) y del rediseño; el **código y este documento son la fuente de verdad** cuando discrepan.
 

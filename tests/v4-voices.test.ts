@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 
-process.env.DATA_DIR = mkdtempSync(path.join(tmpdir(), "agentdeal-v4v-"));
+process.env.DATA_DIR = mkdtempSync(path.join(tmpdir(), "agentd-v4v-"));
 
 import { prepareSession } from "@/server/negotiation/service";
 import { BUYER_SYSTEM, sellerSystem } from "@/server/agents/run";

@@ -14,7 +14,7 @@
 
 ## 2. Arquitectura de información
 
-- **Header global:** marca AgentDeal, estado de paso, badge de Sandbox, enlace «About this demo».
+- **Header global:** marca AgentD, estado de paso, badge de Sandbox, enlace «About this demo».
 - **S01 Discover:** hero, intención, presupuesto, prioridad, preferencias opcionales, CTA y transparencia.
 - **S02 Live Negotiation:** header/progreso, panel de intención, red de agentes, feed, tabla/estado resumido y acción al resultado.
 - **S03 Best Deal:** resultado, precio comparado del ganador, beneficios simulados, explicación, comparación de los cuatro, aprobación/declinación.

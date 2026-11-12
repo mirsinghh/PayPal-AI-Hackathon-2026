@@ -37,7 +37,7 @@ const realProbe: Probe = async () => {
     requestId: crypto.randomUUID(),
     returnUrl: `${process.env.APP_BASE_URL ?? "http://localhost:3000"}/brief`,
     cancelUrl: `${process.env.APP_BASE_URL ?? "http://localhost:3000"}/brief`,
-    description: "AgentDeal Auto-Buy capability check",
+    description: "AgentD Auto-Buy capability check",
   });
 };
 

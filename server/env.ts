@@ -1,6 +1,6 @@
 /**
  * Deployment checks for the public demo (Vercel). Pure: reads only the env object it is given and never returns a value.
- * Names are exactly the ones the code reads (see AgentDeal_DOCS/V5/VERCEL_DEPLOYMENT.md). Run it with `npm run check:env`.
+ * Names are exactly the ones the code reads (see AgentD_DOCS/V5/VERCEL_DEPLOYMENT.md). Run it with `npm run check:env`.
  *
  *   error  the deployment cannot work or would be unsafe
  *   warn   it works, but something the demo promises will be missing or degraded

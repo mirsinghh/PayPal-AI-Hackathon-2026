@@ -526,7 +526,7 @@ describe("deployment environment checks", () => {
     expect(deadlineMs()).toBe(30_000);
   });
   it("every variable the code reads is documented in VERCEL_DEPLOYMENT.md and .env.example is free of real keys", () => {
-    const doc = readFileSync("AgentDeal_DOCS/V5/VERCEL_DEPLOYMENT.md", "utf8");
+    const doc = readFileSync("AgentD_DOCS/V5/VERCEL_DEPLOYMENT.md", "utf8");
     const used = new Set<string>();
     const walk = (dir: string) => {
       for (const f of readdirSync(dir)) {
@@ -571,7 +571,7 @@ describe("public identity: Agent D", () => {
     expect(landing).toContain("Agent D, it always gets you the");
     expect(landing).toContain("BRAND.scope");
   });
-  it("no public text still says AgentDeal (technical identifiers and comments may)", () => {
+  it("no public text still uses the old working name AgentDeal (comments may)", () => {
     const offenders: string[] = [];
     const walk = (dir: string) => {
       for (const f of readdirSync(dir)) {
@@ -591,8 +591,8 @@ describe("public identity: Agent D", () => {
     for (const d of ["app", "components", "lib", "shared"]) walk(d);
     expect(offenders).toEqual([]);
   });
-  it("keeps the technical identifiers that existing data depends on", () => {
-    expect(read("lib/v3/history.ts")).toContain('"agentdeal.v3.history"');
-    expect(read("package.json")).toContain('"name": "agentdeal"');
+  it("uses AgentD in the technical identifiers", () => {
+    expect(read("lib/v3/history.ts")).toContain('"agentd.v3.history"');
+    expect(read("package.json")).toContain('"name": "agentd"');
   });
 });

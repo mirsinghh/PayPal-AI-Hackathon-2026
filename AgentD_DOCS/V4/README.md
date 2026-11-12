@@ -1,4 +1,4 @@
-# AgentDeal V4 — The Negotiation Room
+# AgentD V4 — The Negotiation Room
 
 V4 is an evolution of V3, mounted at `/v4`. V3 (`/v3`) and the classic UI (`/`) are untouched and still work. V4 reuses the same backend, engines, validators, ranking, approval and PayPal Sandbox flow; it changes how agents **speak**, how the recommendation is **explained**, and how the negotiation is **staged**.
 

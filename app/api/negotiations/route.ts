@@ -88,7 +88,7 @@ export async function POST(req: Request) {
     ), auth);
   } catch (e) {
     if (e instanceof MandateError) return apiError(e.status, e.code, e.message);
-    // Vercel without Supabase: say what is missing instead of a generic failure (see AgentDeal_DOCS/V5/VERCEL_DEPLOYMENT.md).
+    // Vercel without Supabase: say what is missing instead of a generic failure (see AgentD_DOCS/V5/VERCEL_DEPLOYMENT.md).
     if (/^storage_not_configured/.test((e as Error).message)) return apiError(503, "STORAGE_NOT_CONFIGURED", "This deployment has no database configured yet.");
     if (e instanceof ScenarioError) {
       return apiError(422, "SCENARIO_UNAVAILABLE", "We couldn't prepare a consistent demo scenario.", {

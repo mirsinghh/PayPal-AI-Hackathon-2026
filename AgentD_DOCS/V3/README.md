@@ -1,8 +1,8 @@
-# AgentDeal V3 — Agent D
+# AgentD V3 — Agent D
 
 > Documentación de lo **realmente implementado** en la V3. No describe funcionalidades futuras.
 
-AgentDeal V3 es un segundo front end, independiente de la versión clásica, sobre el mismo backend. Concepto: **Playful Premium Fintech**. La interfaz es sobria y de confianza; **Agent D**, la mascota del pack `AgentD_V3_HQ_Animaciones`, representa visualmente el trabajo del agente comprador y reacciona a los eventos **reales** de la negociación.
+AgentD V3 es un segundo front end, independiente de la versión clásica, sobre el mismo backend. Concepto: **Playful Premium Fintech**. La interfaz es sobria y de confianza; **Agent D**, la mascota del pack `AgentD_V3_HQ_Animaciones`, representa visualmente el trabajo del agente comprador y reacciona a los eventos **reales** de la negociación.
 
 Principio de producto (sin cambios): *Your AI agent negotiates. You decide.*
 Regla de oro de la V3: **libertad creativa en la presentación, ninguna sobre la verdad de las operaciones.**

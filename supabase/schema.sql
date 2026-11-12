@@ -1,4 +1,4 @@
--- AgentDeal persistence + accounts (V5). Run once in the Supabase SQL editor. Safe to re-run (idempotent).
+-- AgentD persistence + accounts (V5). Run once in the Supabase SQL editor. Safe to re-run (idempotent).
 --
 -- Security model
 --   * Supabase Auth (auth.users) owns identities and password hashing. This app never sees or stores a password.

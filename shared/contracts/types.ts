@@ -1,4 +1,4 @@
-// Shared domain contracts (see AgentDeal_DOCS/DOCS/07_MODELO_DE_DATOS_Y_APIS.md).
+// Shared domain contracts (see AgentD_DOCS/DOCS/07_MODELO_DE_DATOS_Y_APIS.md).
 // All money values are integer cents in EUR.
 
 export const SELLER_IDS = ["nova", "orbit", "prism", "vertex"] as const;

@@ -17,7 +17,7 @@
 
 | Reutilizado tal cual | `lib/request-parse.ts`, `lib/negotiation-view.ts` (`deriveSellers`, `deriveDraft`, `eventKind`), `lib/offer-view.ts`, `lib/api.ts` (`api`, `useSession`), `lib/use-motion-env.ts`, `shared/*` (contratos, vendedores, formato, muestra), `app/api/*`, `server/*` |
 |---|---|
-| **Nuevo (V3)** | `app/v3/*`, `components/v3/*`, `lib/v3/*`, `public/agent-d/v3/*`, `scripts/v3-prepare-agent-d.mjs`, `tests/v3-*.test.ts`, `AgentDeal_DOCS/V3/*` |
+| **Nuevo (V3)** | `app/v3/*`, `components/v3/*`, `lib/v3/*`, `public/agent-d/v3/*`, `scripts/v3-prepare-agent-d.mjs`, `tests/v3-*.test.ts`, `AgentD_DOCS/V3/*` |
 | **Portado** | `lib/v3/use-paypal-checkout.ts` replica el flujo de `Checkout.tsx` (mismos endpoints, orden y estados), con una comprobación más estricta: solo `status === "completed"` es éxito |
 | **No reutilizado a propósito** | `components/negotiation/*`, `components/offers/*`, `components/slip/*`: están acoplados al lenguaje visual clásico (tokens `bg-primary`, `text-ink`…). La V3 comparte su **lógica** (view models) y rehace la presentación |
 | **Intacto** | La UI clásica (solo movida de carpeta) y todo el backend |
