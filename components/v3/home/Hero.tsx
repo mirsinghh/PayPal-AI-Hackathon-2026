@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { BaseLink } from "@/components/v3/BaseLink";
 import { btn } from "@/components/v3/ui";
 import { IconArrow, IconCheck, IconPlay } from "@/components/v3/icons";
 import { EngineBadge } from "./EngineBadge";
@@ -23,9 +23,9 @@ export function Hero() {
             Tell Agent D what you want to buy. It explores four stores, negotiates for you and brings back one recommended offer. <strong className="text-v3-ink">Your AI agent negotiates. You decide.</strong>
           </p>
           <div className="v3-rise mt-8 flex flex-wrap items-center gap-x-4 gap-y-3" style={{ ["--i" as string]: 3 }}>
-            <Link href="/v3/brief" className={btn("primary", "lg")}>
+            <BaseLink to="/brief" className={btn("primary", "lg")}>
               Start negotiating <IconArrow size={20} />
-            </Link>
+            </BaseLink>
             <a href="#demo" className={btn("secondary", "lg")}>
               <IconPlay size={16} /> Watch Agent D in action
             </a>

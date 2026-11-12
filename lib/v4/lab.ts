@@ -1,5 +1,6 @@
 import { rankOffers, WEIGHTS } from "@/server/negotiation/ranking";
 import { deliveryLabel, diffPhrases, diffVs, ineligibleLabel, warrantyLabel } from "@/lib/offer-view";
+import { providerOfEvent } from "./provider";
 import { formatEur } from "@/shared/format";
 import { SELLER_BRANDS } from "@/shared/sellers";
 import type { NegotiationEvent, NegotiationSession, Offer, Priority, SellerId } from "@/shared/contracts/types";
@@ -100,7 +101,7 @@ export interface LabData {
   facets: Facet[];
   why: string[];
   conclusions: Conclusion[];
-  explanation: { text: string; origin: EvidenceOrigin; model: string | null };
+  explanation: { text: string; origin: EvidenceOrigin; model: string | null; provider: string | null };
   /** Agent D's own advantages / trade-offs for the pick (same origin as the explanation). */
   advantages: string[];
   tradeoffs: string[];
@@ -171,8 +172,14 @@ export function buildLab(session: Pick<NegotiationSession, "offers" | "events" |
     if (p === "free_shipping") why.push(o.freeShipping ? `You also asked for free shipping: ${winner.brand} ships free.` : `You asked for free shipping, but ${winner.brand} charges for shipping; the server's score does not use this preference.`);
     if (p === "fast_delivery") why.push(`You also asked for fast delivery: ${winner.brand} delivers in ${deliveryLabel(o.deliveryDays).toLowerCase()}${fastest.includes(winner.sellerId) ? ", the fastest among eligible offers" : ""}.`);
   }
-  const choseOffTop = ev.rankedOfferIds[0] !== undefined && ev.rankedOfferIds[0] !== session.recommendedOfferId;
-  if (choseOffTop) why.push("Agent D chose a different offer from the server's top-ranked one. The server checked that it is eligible and within budget before accepting it.");
+  // The server's ranking decides the recommendation. If Agent D proposed another offer, that discrepancy was recorded on the
+  // final decision event; it is shown as technical information and never changes the recommended offer.
+  const discrepancy = session.events.find((e) => e.type === "BUYER_DECISION" && e.payload.final === true)?.payload.discrepancy as { agentProposalOfferId?: string } | undefined;
+  const proposed = discrepancy?.agentProposalOfferId ? offers.find((o) => o.offerId === discrepancy.agentProposalOfferId) : undefined;
+  const legacyOffTop = !discrepancy && ev.rankedOfferIds[0] !== undefined && ev.rankedOfferIds[0] !== session.recommendedOfferId; // sessions from before the rule
+  const choseOffTop = !!proposed || legacyOffTop;
+  if (proposed) why.push(`Agent D's own proposal was ${SELLER_BRANDS[proposed.sellerId].brand}. The server's ranking decides which offer is recommended, so ${winnerOffer.sellerId === proposed.sellerId ? "" : SELLER_BRANDS[winnerOffer.sellerId].brand + " "}stands (recorded as a technical discrepancy).`);
+  else if (legacyOffTop) why.push("Agent D chose a different offer from the server's top-ranked one. The server checked that it is eligible and within budget before accepting it.");
 
   /* ---- evidence, per conclusion ---- */
   const evOf = (types: string[], sellerId?: SellerId) => session.events.filter((e) => types.includes(e.type) && (!sellerId || e.sellerId === sellerId)).map(ref);
@@ -205,7 +212,7 @@ export function buildLab(session: Pick<NegotiationSession, "offers" | "events" |
     facets,
     why,
     conclusions,
-    explanation: { text: ev.aiSummary, origin: explanationOrigin, model: ev.modelName },
+    explanation: { text: ev.aiSummary, origin: explanationOrigin, model: ev.modelName, provider: ev.source === "llm" ? (ev.provider ?? (finalDecision ? providerOfEvent(finalDecision) : null) ?? "gemini") : null },
     advantages: ev.aiReasons,
     tradeoffs: ev.tradeoffs,
     choseOffTop,

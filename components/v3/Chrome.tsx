@@ -8,14 +8,14 @@ import { btn } from "@/components/v3/ui";
 import { IconArrow } from "@/components/v3/icons";
 
 // Paths are relative to where the UI is mounted (/v3 or /v4, see lib/v3/base.tsx).
-const FLOW = [
+export const FLOW = [
   { path: "/brief", label: "Mission" },
   { path: "/negotiation", label: "Negotiation" },
   { path: "/deals", label: "Review" },
   { path: "/checkout", label: "Pay" },
 ] as const;
 
-function Logo({ base }: { base: string }) {
+export function Logo({ base }: { base: string }) {
   const version = base.slice(1).toUpperCase();
   return (
     <Link href={base} aria-label={`AgentDeal ${version} home`} className="group flex items-center gap-2.5 rounded-v3-md">
@@ -33,7 +33,7 @@ export function V3HeaderFallback() {
 }
 
 /** The purchase flow in four steps. Informational: derived from the route, never a way to skip ahead. */
-function FlowProgress({ index }: { index: number }) {
+export function FlowProgress({ index }: { index: number }) {
   return (
     <nav aria-label="Purchase progress">
       <p className="text-sm font-semibold text-v3-ink2 md:hidden">

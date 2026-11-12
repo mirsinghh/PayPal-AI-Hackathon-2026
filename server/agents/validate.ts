@@ -1,4 +1,5 @@
 import type { Offer, SellerId, SellerPolicy } from "@/shared/contracts/types";
+import { SELLER_BRANDS } from "@/shared/sellers";
 import type { BuyerFinal, BuyerRound, SellerReply } from "./schemas";
 import type { CatalogItem, SellerProfile } from "./catalog";
 import { AGENT_POLICY_VERSION } from "./catalog";
@@ -62,6 +63,34 @@ export function allowedSellerAmounts(c: SellerContext, proposed: number): number
   return out;
 }
 
+/**
+ * (kept for callers that only need the floor) The lowest item price this seller may answer with right now: its private reserve, or the largest concession its own
+ * per-round limit allows, whichever is higher. Same arithmetic as `validateSellerReply`; it only lets the seller see its
+ * own limit (private context), it does not change any rule.
+ */
+export function lowestAllowedItemCents(item: CatalogItem, profile: SellerProfile, previousItemCents: number): number {
+  return Math.max(item.minPriceCents, previousItemCents - Math.floor((previousItemCents * profile.maxConcessionPerRoundBps) / 10_000));
+}
+
+/**
+ * The exact window a seller may answer within this turn, in integer cents, using the same arithmetic as
+ * `validateSellerReply`: opening = between reserve and list price; later = never above the current price, never below the
+ * reserve, and a concession is at most the per-round cap. `canConcede` is false when the floor equals the current price
+ * (the seller can only hold). Private to that seller: it is only ever put in that seller's own prompt.
+ */
+export interface PriceWindow {
+  minItemCents: number;
+  maxItemCents: number;
+  actions: ("quote" | "concede" | "hold")[];
+  canConcede: boolean;
+}
+export function sellerPriceWindow(item: CatalogItem, profile: SellerProfile, previousItemCents: number | null): PriceWindow {
+  if (previousItemCents === null) return { minItemCents: item.minPriceCents, maxItemCents: item.listPriceCents, actions: ["quote"], canConcede: false };
+  const lowest = lowestAllowedItemCents(item, profile, previousItemCents);
+  const canConcede = lowest < previousItemCents;
+  return { minItemCents: Math.min(lowest, previousItemCents), maxItemCents: previousItemCents, actions: canConcede ? ["concede", "hold"] : ["hold"], canConcede };
+}
+
 /** Returns a reason code when the proposal is not allowed. Pure; the single gate before an offer changes. */
 export function validateSellerReply(reply: SellerReply, c: SellerContext): string | null {
   const { item, profile, previousItemCents: prev } = c;
@@ -80,6 +109,8 @@ export function validateSellerReply(reply: SellerReply, c: SellerContext): strin
       if (prev - p > Math.floor((prev * profile.maxConcessionPerRoundBps) / 10_000)) return "concession_too_large";
     }
   }
+  // The reserve is private: a message may not even allude to it (seen in the second real Groq run: "staying above my reserve").
+  if (/\b(reserve price|my reserve|our reserve|the reserve|above (my|our) reserve|below (my|our) reserve|floor price|minimum price|cost price)\b/i.test(reply.message)) return "mentions_reserve";
   return ungroundedAmount([reply.message], allowedSellerAmounts(c, p));
 }
 
@@ -111,16 +142,52 @@ export function validateBuyerRound(round: BuyerRound, book: BookEntry[], budgetC
   return ungroundedAmount([round.rationale, ...round.moves.map((m) => m.message)], allowed);
 }
 
-export function validateBuyerFinal(final: BuyerFinal, offers: Offer[], budgetCents: number): string | null {
+export interface FinalCheck {
+  /** The server's top-ranked eligible offer. When given, Agent D's final choice must be that offer (the ranking decides). */
+  topOfferId?: string;
+  /** The server's stored scores, used to verify "highest score" claims. */
+  scores?: Record<string, number>;
+}
+
+/**
+ * Validates Agent D's final decision. Scope of every comparative claim: the ELIGIBLE offers (the ones that can be bought);
+ * an offer set aside by the server never counts as "cheaper" or "faster". Claims are checked only about the chosen offer
+ * (summary and reasons); the trade-offs may mention other stores' strengths. Only claims about data we hold are checked:
+ * price, delivery, warranty, score, savings, eligibility and which store is recommended.
+ */
+export function validateBuyerFinal(final: BuyerFinal, offers: Offer[], budgetCents: number, check: FinalCheck = {}): string | null {
   const chosen = offers.find((o) => o.offerId === final.chosenOfferId);
   if (!chosen) return "unknown_offer";
   if (!chosen.eligible) return "chosen_offer_not_eligible";
+  if (check.topOfferId && chosen.offerId !== check.topOfferId) return "not_server_top_ranked";
   const allowed = [budgetCents];
   for (const o of offers) {
     allowed.push(o.initialPriceCents, o.finalPriceCents, o.discountCents);
     if (o.catalog) allowed.push(o.catalog.itemPriceCents, o.catalog.shippingCents);
   }
-  return ungroundedAmount([final.summary, ...final.reasons, ...final.tradeoffs], allowed);
+  const grounded = ungroundedAmount([final.summary, ...final.reasons, ...final.tradeoffs], allowed);
+  if (grounded) return grounded;
+
+  const buyable = offers.filter((o) => o.eligible);
+  const praise = [final.summary, ...final.reasons].join(" ");
+  if (/\b(lowest|cheapest|best)\s+(total\s+)?(price|cost)\b|\bcheapest\b|\blowest total\b/i.test(praise) && chosen.finalPriceCents > Math.min(...buyable.map((o) => o.finalPriceCents))) return "unsupported_claim:lowest_price";
+  if (/\bfastest\b/i.test(praise) && chosen.deliveryDays > Math.min(...buyable.map((o) => o.deliveryDays))) return "unsupported_claim:fastest_delivery";
+  if (/\blongest\s+warranty\b/i.test(praise) && chosen.warrantyMonths < Math.max(...buyable.map((o) => o.warrantyMonths))) return "unsupported_claim:longest_warranty";
+  if (check.scores && /\b(highest|best|top)\s+(match\s+)?score\b|\b(highest|top)[- ]ranked\b/i.test(praise)) {
+    const best = Math.max(...buyable.map((o) => check.scores?.[o.offerId] ?? -1));
+    if ((check.scores[chosen.offerId] ?? -1) < best) return "unsupported_claim:best_score";
+  }
+  // A "saving" must be a saving the server recorded: the chosen offer's discount from its own opening price.
+  for (const m of praise.matchAll(/\bsav(?:e|es|ed|ing|ings)\b[^.]{0,50}/gi)) {
+    for (const cents of amountsInText(m[0])) if (cents !== chosen.discountCents) return "unsupported_claim:savings";
+  }
+  if (/\b(over|exceeds?|above|beyond)\s+(your\s+|the\s+)?budget\b|\bnot eligible\b|\bineligible\b/i.test(praise)) return "unsupported_claim:eligibility";
+  for (const o of offers) {
+    if (o.offerId === chosen.offerId) continue;
+    const brand = SELLER_BRANDS[o.sellerId].brand;
+    if (new RegExp(`(recommend[a-z]*|winner|best (match|value|pick|choice)).{0,12}${brand}`, "i").test(praise)) return "unsupported_claim:recommended_offer";
+  }
+  return null;
 }
 
 /* ---------- offer integrity (server-side, after any change) ---------- */
@@ -186,28 +253,63 @@ export function buildOffer(args: {
 
 /* ---------- labelled rule-based fallbacks (used only when a model turn fails) ---------- */
 
-/** Seller fallback: open at list price; later, meet the buyer halfway within the policy limits. */
+/**
+ * Seller fallback (rules, used only when a model turn fails): open at list price; later, meet the buyer halfway within the
+ * policy limits. The wording is in each seller's register and uses only the seller's own real terms; it is stored and shown as
+ * "Rules fallback", never as a model message.
+ */
 export function rulesSellerReply(c: SellerContext): SellerReply {
   const { item, profile, previousItemCents: prev, targetItemCents: target } = c;
+  const say = SELLER_FALLBACK_LINES[profile.strategy];
   if (prev === null) {
-    return { action: "quote", priceCents: item.listPriceCents, message: "Our standard list price for this item." };
+    return { action: "quote", priceCents: item.listPriceCents, message: say.open(profile) };
   }
   const wanted = Math.max(target ?? prev, item.minPriceCents);
   const cap = Math.floor((prev * profile.maxConcessionPerRoundBps) / 10_000);
   const step = Math.min(cap, Math.floor((prev - wanted) / 2));
-  if (step <= 0) return { action: "hold", priceCents: prev, message: "We are keeping our current price." };
-  return { action: "concede", priceCents: prev - step, message: "We can improve the price a little." };
+  if (step <= 0) return { action: "hold", priceCents: prev, message: say.hold(profile) };
+  return { action: "concede", priceCents: prev - step, message: say.concede(profile) };
 }
 
-/** Buyer fallback: ask every seller still above budget, or any seller, for 5% less. */
+const SELLER_FALLBACK_LINES: Record<SellerProfile["strategy"], { open: (p: SellerProfile) => string; hold: (p: SellerProfile) => string; concede: (p: SellerProfile) => string }> = {
+  price_fighter: {
+    open: () => "Here is our outlet price for this item.",
+    hold: () => "That is already a sharp outlet price, so I will hold it.",
+    concede: () => "Okay, I can sharpen the price a bit for you.",
+  },
+  fast_delivery: {
+    open: (p) => (p.deliveryDays <= 1 ? "Our price, with next-day delivery included." : "Our price for this item."),
+    hold: (p) => (p.deliveryDays <= 1 ? "The speed is part of the price, so I will hold it." : "I will hold the price."),
+    concede: () => "I can adjust the price slightly; the service stays the same.",
+  },
+  premium_value: {
+    open: (p) => `Our price, backed by a ${p.warrantyMonths}-month warranty.`,
+    hold: (p) => `The ${p.warrantyMonths}-month warranty is part of the value, so I will hold the price.`,
+    concede: () => "A small adjustment is possible; the full terms stay included.",
+  },
+  hard_negotiator: {
+    open: () => "Listed price. Firm.",
+    hold: () => "No room on the price.",
+    concede: () => "One small step. That is all.",
+  },
+};
+
+const BUYER_FALLBACK_LINES: Record<SellerId, string> = {
+  nova: "Your outlet price is a good start. Can you sharpen it a little more?",
+  orbit: "I like the delivery speed. Can you improve the price a little?",
+  prism: "The warranty is valuable. Could you adjust the price a little?",
+  vertex: "Your terms are clear. Is there any room on the price?",
+};
+
+/** Buyer fallback: ask every seller for 5% less, in a line that fits each store. Stored and shown as "Rules fallback". */
 export function rulesBuyerRound(book: BookEntry[]): BuyerRound {
   return {
-    rationale: "Asking each seller for a small price improvement.",
+    rationale: "Asking each store for a small price improvement.",
     moves: book.map((b) => ({
       sellerId: b.sellerId,
       action: "counter" as const,
       targetPriceCents: Math.max(1, b.itemPriceCents - Math.floor(b.itemPriceCents / 20)),
-      message: "Could you improve your price a little?",
+      message: BUYER_FALLBACK_LINES[b.sellerId],
     })),
   };
 }

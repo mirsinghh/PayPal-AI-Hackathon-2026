@@ -1,5 +1,6 @@
 import { SELLER_IDS, type NegotiationEvent, type NegotiationSession, type Offer, type SellerId } from "@/shared/contracts/types";
 import { buildConversation, type ChatMessage } from "@/lib/v3/conversation";
+import { authorLabel, authorOf, type Author } from "./provider";
 import { buyerAsk, sellerOpening, sellerReply, type KnownOffer } from "./scripts";
 
 /**
@@ -19,6 +20,9 @@ export interface V4Message extends ChatMessage {
   scripted: boolean;
   group: { key: string; label: string };
   outcome: Outcome | null;
+  /** Which provider/model/agent wrote an AI message, from the persisted event. Null for rules, server and system text. */
+  author: Author | null;
+  authorLabel: string | null;
 }
 
 const GROUP_MISSION = { key: "mission", label: "Mission" };
@@ -93,7 +97,8 @@ export function buildV4Conversation(events: readonly NegotiationEvent[], ctx: V4
     const outcome: Outcome | null = m.kind === "reply" && price ? (price.held || (price.previousCents !== null && price.currentCents >= price.previousCents) ? "held" : "improved") : null;
 
     // Amounts quoted in a scripted line are re-checked against what the server recorded (they must all be recorded).
-    out.push({ ...m, text, templated, scripted, group, outcome, round, price });
+    const author = m.origin === "ai" && e && (m.speaker === "buyer" || m.speaker === "seller") ? authorOf(e, m.speaker) : null;
+    out.push({ ...m, text, templated, scripted, group, outcome, round, price, author, authorLabel: author ? authorLabel(author) : null });
   }
   return out;
 }

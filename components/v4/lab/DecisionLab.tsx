@@ -8,6 +8,7 @@ import type { Offer, Priority, SellerId } from "@/shared/contracts/types";
 import { PRIORITIES } from "@/shared/contracts/types";
 import { COMPONENT_LABEL, EVIDENCE_LABEL, PRIORITY_NAME, compareTo, whatIf, type Component, type EventRef, type EvidenceOrigin, type LabData, type LabRow } from "@/lib/v4/lab";
 import { SELLER_PERSONA } from "@/lib/v4/personas";
+import { analysisLabel, authorLabel } from "@/lib/v4/provider";
 import { Chip, StoreMark, type ChipTone } from "@/components/v3/ui";
 import { IconCheck, IconPackage, IconShield, IconTruck } from "@/components/v3/icons";
 
@@ -106,7 +107,7 @@ function Hero({ lab, budgetCents }: { lab: LabData; budgetCents: number }) {
         <div className="grid content-start gap-4 sm:grid-cols-2 md:grid-cols-1">
           <div>
             <p className="flex flex-wrap items-center gap-2 text-sm font-extrabold text-v3-success">
-              Strengths <OriginChip origin={lab.explanation.origin} model={lab.explanation.model} />
+              Strengths <Chip tone={lab.explanation.origin === "ai" ? "primary" : "warn"} className="!py-0.5 !text-[0.68rem]">{analysisLabel({ source: lab.explanation.origin === "ai" ? "llm" : "rules_fallback", modelName: lab.explanation.model, provider: lab.explanation.provider })}</Chip>
             </p>
             {lab.advantages.length ? (
               <ul className="mt-1.5 space-y-1.5">
@@ -134,11 +135,10 @@ function Hero({ lab, budgetCents }: { lab: LabData; budgetCents: number }) {
   );
 }
 
-function OriginChip({ origin, model }: { origin: EvidenceOrigin; model?: string | null }) {
+function OriginChip({ origin, model, provider }: { origin: EvidenceOrigin; model?: string | null; provider?: string | null }) {
   return (
     <Chip tone={ORIGIN_TONE[origin]} className="!py-0.5 !text-[0.68rem]">
-      {EVIDENCE_LABEL[origin]}
-      {origin === "ai" && model ? ` · ${model}` : ""}
+      {origin === "ai" && (provider === "groq" || provider === "gemini") ? authorLabel({ provider, model: model ?? null, role: "buyer" }) : EVIDENCE_LABEL[origin]}
     </Chip>
   );
 }
@@ -370,7 +370,7 @@ function Evidence({ lab, onShowEvent }: { lab: LabData; onShowEvent?: (r: EventR
               {c.evidence.map((e) => (
                 <li key={e.id} className="text-sm">
                   <p className="flex flex-wrap items-center gap-2">
-                    <OriginChip origin={e.origin} model={e.origin === "ai" ? lab.explanation.model : null} />
+                    <OriginChip origin={e.origin} model={e.origin === "ai" ? lab.explanation.model : null} provider={e.origin === "ai" ? lab.explanation.provider : null} />
                   </p>
                   <p className="mt-1 text-pretty">{e.origin === "ai" || e.origin === "fallback" ? `“${e.text}”` : e.text}</p>
                   {e.events.length > 0 && (

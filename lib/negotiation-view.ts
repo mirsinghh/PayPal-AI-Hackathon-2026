@@ -27,7 +27,7 @@ export interface SellerState {
   openingCents: number | null;
   message: string | null;
   /** "gemini" = real model reply, "rules_fallback" = deterministic fallback, null = rule-based simulation. */
-  source: "gemini" | "rules_fallback" | null;
+  source: "gemini" | "groq" | "rules_fallback" | null;
   /** Buyer asked, seller hasn't replied yet (a real, recorded state). */
   awaitingReply: boolean;
   rejectedReason: string | null;
@@ -115,7 +115,7 @@ export function deriveSellers(session: NegotiationSession, visible: NegotiationE
       previousCents: previousRaw !== null && previousRaw !== priceCents ? previousRaw : null,
       openingCents: opened ? num(opened.payload.initialPriceCents) : null,
       message: lastReply && sourceRaw && typeof lastReply.payload.message === "string" ? lastReply.payload.message : null,
-      source: sourceRaw === "gemini" || sourceRaw === "rules_fallback" ? sourceRaw : null,
+      source: sourceRaw === "gemini" || sourceRaw === "groq" || sourceRaw === "rules_fallback" ? sourceRaw : null,
       awaitingReply,
       rejectedReason: rejected ? String(rejected.payload.reasonCode ?? "ineligible") : null,
       score: evaluated ? num(evaluated.payload.score) : null,

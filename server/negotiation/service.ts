@@ -1,12 +1,13 @@
 import { randomUUID } from "node:crypto";
-import type { NegotiationSession, ProductIntent } from "@/shared/contracts/types";
-import { explain, type LlmCaller, geminiCaller } from "@/server/ai/explain";
+import type { NegotiationSession, ProductIntent, ResponseMode } from "@/shared/contracts/types";
+import { explain, type LlmCaller } from "@/server/ai/explain";
+import { explanationCaller, resolveEngine } from "@/server/ai/provider";
 import { composeEvents } from "./events";
 import { rankOffers } from "./ranking";
 import { buildScenario } from "./scenario";
 import { catalogForCategory, matchCategory } from "@/server/agents/catalog";
 import { deadlineMs, modelRpm, multiAgentEnabled, quotaBreakerOpen, reserveRunSlot, singleCallEngine } from "@/server/agents/config";
-import { geminiModelCaller, sharedRateLimiter, type ModelCaller } from "@/server/agents/model";
+import { sharedRateLimiter, type ModelCaller } from "@/server/agents/model";
 import { runMultiAgentNegotiation } from "@/server/agents/run";
 import { runSingleCallNegotiation } from "@/server/agents/single";
 
@@ -25,7 +26,7 @@ export async function prepareSession(
     intent,
     offers,
     ranking,
-    opts.caller === undefined ? geminiCaller() : opts.caller,
+    opts.caller === undefined ? explanationCaller() : opts.caller,
   );
   const full = { ...evaluation, evaluationId: `eval_${randomUUID()}`, sessionId };
   return {
@@ -71,21 +72,38 @@ export interface StartedNegotiation {
  */
 export async function startNegotiation(
   intent: ProductIntent,
-  opts: { caller?: ModelCaller | null; now?: Date } = {},
+  opts: {
+    caller?: ModelCaller | null;
+    now?: Date;
+    /**
+     * V5 selector, chosen before the negotiation and fixed for it. "server": backend rules only, the negotiation never
+     * calls a model. "ai": real model agents (no MULTI_AGENT_NEGOTIATION flag needed: the user's choice is the opt-in).
+     * Omitted (legacy callers): the MULTI_AGENT_NEGOTIATION flag decides, as before V5.
+     */
+    responseMode?: ResponseMode;
+    /** Test seam for the request analysis (explanation) caller. It is never derived from responseMode. */
+    explainCaller?: LlmCaller | null;
+    ownerId?: string | null;
+  } = {},
 ): Promise<StartedNegotiation> {
+  const requested: ResponseMode = opts.responseMode ?? (multiAgentEnabled() ? "ai" : "server");
+  const owner = opts.ownerId ? { ownerId: opts.ownerId } : {};
   const v0 = async (reason: string | null): Promise<StartedNegotiation> => {
-    const session = await prepareSession(intent, { now: opts.now });
-    return { session: { ...session, mode: "v0_rules", fallbackReason: reason }, run: null };
+    // The analysis (explanation) provider is configured on its own and is the same for both response modes.
+    const session = await prepareSession(intent, { now: opts.now, ...(opts.explainCaller !== undefined ? { caller: opts.explainCaller } : {}) });
+    return { session: { ...session, mode: "v0_rules", fallbackReason: reason, responseMode: requested, ...owner }, run: null };
   };
-  if (!multiAgentEnabled()) return v0(null);
+  if (requested === "server") return v0(null);
 
-  const caller = opts.caller === undefined ? geminiModelCaller() : opts.caller;
-  if (!caller) return v0("no_api_key");
+  // The provider is chosen by configuration only (AI_PROVIDER). Injected callers (tests) bypass it.
+  const engine = opts.caller === undefined ? resolveEngine() : null;
+  const caller = opts.caller === undefined ? (engine as NonNullable<typeof engine>).caller : opts.caller;
+  if (!caller) return v0(engine?.unavailable ?? "no_api_key");
   const category = matchCategory(intent.productQuery);
   if (!category) return v0("no_catalog_match");
   const reachable = catalogForCategory(category).some((c) => c.minPriceCents + c.shippingCents <= intent.budgetCents && c.stock > 0);
   if (!reachable) return v0("budget_below_catalog");
-  if (quotaBreakerOpen()) return v0("model_quota_exhausted");
+  if (quotaBreakerOpen(engine?.provider ?? "gemini")) return v0("model_quota_exhausted");
   if (!reserveRunSlot()) return v0("cost_cap");
 
   const now = opts.now ?? new Date();
@@ -118,11 +136,15 @@ export async function startNegotiation(
     schemaVersion: "1.0",
     mode: "multi_agent",
     fallbackReason: null,
+    responseMode: "ai",
+    ...owner,
   };
   // Only the real provider is paced; injected test callers are not.
-  const limiter = opts.caller === undefined && modelRpm() > 0 ? sharedRateLimiter(modelRpm()) : null;
+  // Gemini is paced by a simple RPM window. Groq paces itself inside its adapter (per model, from the provider's headers).
+  const limiter = engine?.provider === "gemini" && modelRpm() > 0 ? sharedRateLimiter(modelRpm()) : null;
+  const meta = engine ? { provider: engine.provider, buyerModel: engine.agents.find((a) => a.role === "buyer")?.model ?? null, sellerModel: engine.agents.find((a) => a.role === "seller")?.model ?? null, explanationModel: engine.agents.find((a) => a.role === "explanation")?.model ?? null } : undefined;
   if (singleCallEngine()) return { session, run: () => runSingleCallNegotiation(sessionId, intent, category, caller, limiter) };
-  return { session, run: () => runMultiAgentNegotiation(sessionId, intent, category, caller, { limiter }) };
+  return { session, run: () => runMultiAgentNegotiation(sessionId, intent, category, caller, { limiter, engine: meta }) };
 }
 
 /** A run that never finished (process killed, deadline) must not leave the session "negotiating" forever. */

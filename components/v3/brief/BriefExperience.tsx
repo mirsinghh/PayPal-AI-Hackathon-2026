@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useId, useMemo, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
 import { api, ApiFailure } from "@/lib/api";
-import { PREFERENCES, PRIORITIES, type Preference, type Priority } from "@/shared/contracts/types";
+import { PREFERENCES, PRIORITIES, type Preference, type Priority, type ResponseMode } from "@/shared/contracts/types";
 import { AI_DEMO_NOTICE } from "@/shared/format";
 import { EXAMPLE_REQUESTS } from "@/shared/products";
 import { PREF_LABEL, PRIORITY_LABEL, deriveMission, readBack, toIntent } from "@/lib/v3/brief";
@@ -14,6 +14,7 @@ import { useAgentDirector, usePreloadAgentD } from "@/lib/v3/mascot/hooks";
 import { AgentDActor } from "@/components/v3/mascot/AgentD";
 import { Chip, Notice, Spinner, btn } from "@/components/v3/ui";
 import { IconArrow, IconCheck } from "@/components/v3/icons";
+import { ResponseModeSwitch } from "@/components/v5/ResponseModeSwitch";
 
 /**
  * "Tell Agent D": the same extraction as the classic brief, presented as handing a mission to your agent.
@@ -25,7 +26,11 @@ export function BriefExperience() {
   const router = useRouter();
   const base = useAppBase();
   const ids = { prompt: useId(), query: useId(), budget: useId() };
-  const { multiAgent } = useEngineMode();
+  const { multiAgent, aiAvailable, aiReason } = useEngineMode();
+  // V5 only: the user picks who writes the stores' replies before starting. Server Responses is the safe default.
+  const v5 = base === "/v5";
+  const [responseMode, setResponseMode] = useState<ResponseMode>("server");
+  const effectiveMode: ResponseMode = responseMode === "ai" && !aiAvailable ? "server" : responseMode;
   const agent = useAgentDirector("idle");
 
   const [prompt, setPrompt] = useState("");
@@ -63,7 +68,7 @@ export function BriefExperience() {
     setSubmitting(true);
     setServerError(null);
     try {
-      const res = await api<{ sessionId: string }>("/api/negotiations", { method: "POST", body: JSON.stringify(toIntent(mission, priority, prefs)) });
+      const res = await api<{ sessionId: string }>("/api/negotiations", { method: "POST", body: JSON.stringify(v5 ? { ...toIntent(mission, priority, prefs), responseMode: effectiveMode } : toIntent(mission, priority, prefs)) });
       // Local demo history (this browser only): the id, the request and the budget. No payment or secret data.
       rememberNegotiation({ sessionId: res.sessionId, createdAt: new Date().toISOString(), query: mission.query, budgetCents: mission.budgetCents as number });
       router.push(`${base}/negotiation/${res.sessionId}`);
@@ -276,6 +281,12 @@ export function BriefExperience() {
                 </div>
               </fieldset>
 
+              {v5 && (
+                <div className="border-t border-dashed border-v3-line-strong pt-5">
+                  <ResponseModeSwitch value={effectiveMode} onChange={setResponseMode} aiAvailable={aiAvailable} aiReason={aiReason} disabled={submitting} />
+                </div>
+              )}
+
               <p className="border-t border-dashed border-v3-line-strong pt-4 text-sm text-v3-ink2">
                 Agent D will talk to <strong className="text-v3-ink">4 demo stores</strong>.
               </p>
@@ -300,7 +311,7 @@ export function BriefExperience() {
             </div>
           </div>
           <p className="mt-4 text-xs text-v3-ink2">
-            {multiAgent ? AI_DEMO_NOTICE : "Rule-based demo: the four stores, their offers and terms are simulated. No real purchase happens, and payments use PayPal Sandbox."}
+            {(v5 ? effectiveMode === "ai" : multiAgent) ? AI_DEMO_NOTICE : "Rule-based demo: the four stores, their offers and terms are simulated. No real purchase happens, and payments use PayPal Sandbox."}
           </p>
         </aside>
       </form>

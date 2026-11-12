@@ -25,6 +25,12 @@ export const LIMITS = {
   maxRunsPerHour: 40,
 } as const;
 
+/** Cap on model attempts per negotiation (cost control). MULTI_AGENT_MAX_CALLS overrides the default of 16 (allowed 8-40). */
+export function maxModelCalls(): number {
+  const n = Number(process.env.MULTI_AGENT_MAX_CALLS);
+  return Number.isInteger(n) && n >= 8 && n <= 40 ? n : LIMITS.maxModelCalls;
+}
+
 export function deadlineMs(): number {
   const n = Number(process.env.MULTI_AGENT_DEADLINE_MS);
   return Number.isFinite(n) && n >= 5_000 && n <= 600_000 ? n : LIMITS.deadlineMs;
@@ -45,15 +51,16 @@ export function multiAgentEnabled(): boolean {
 }
 
 /**
- * Circuit breaker for provider quota. A daily-quota 429 ("retry in 9h") cannot be waited out, so further
- * runs skip straight to the labelled V0 fallback instead of burning attempts and user time.
+ * Circuit breaker for provider quota, per provider. A daily-quota 429 ("retry in 9h") cannot be waited out, so further
+ * runs skip straight to the labelled V0 fallback instead of burning attempts and user time. A breaker on one provider
+ * never switches the run to another one: that would spend a different quota without being asked.
  */
-let quotaUntil = 0;
-export function tripQuotaBreaker(retryAfterMs: number, now = Date.now()) {
-  quotaUntil = Math.max(quotaUntil, now + retryAfterMs);
+const quotaUntil = new Map<string, number>();
+export function tripQuotaBreaker(retryAfterMs: number, provider = "gemini", now = Date.now()) {
+  quotaUntil.set(provider, Math.max(quotaUntil.get(provider) ?? 0, now + retryAfterMs));
 }
-export function quotaBreakerOpen(now = Date.now()): boolean {
-  return now < quotaUntil;
+export function quotaBreakerOpen(provider = "gemini", now = Date.now()): boolean {
+  return now < (quotaUntil.get(provider) ?? 0);
 }
 
 let runTimes: number[] = [];
@@ -66,5 +73,5 @@ export function reserveRunSlot(now = Date.now(), max: number = LIMITS.maxRunsPer
 }
 export function resetRunSlotsForTests() {
   runTimes = [];
-  quotaUntil = 0;
+  quotaUntil.clear();
 }

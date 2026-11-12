@@ -106,11 +106,22 @@ export interface Evaluation {
   tradeoffs: string[];
   source: "llm" | "rules_fallback";
   modelName: string | null;
+  /** Provider that wrote the explanation ("groq" | "gemini"). Absent on sessions created before provider tracking. */
+  provider?: string | null;
   validatedAt: string;
 }
 
-/** v0_rules: deterministic simulation. multi_agent: real Gemini agents. */
+/** v0_rules: deterministic simulation. multi_agent: real model agents (Groq or Gemini). */
 export type NegotiationMode = "v0_rules" | "multi_agent";
+
+/**
+ * What the user chose before the negotiation started (V5 selector). It only governs who writes the negotiation replies:
+ *  - "server": deterministic backend rules, no model call for negotiation replies.
+ *  - "ai": real model agents. If they cannot run, the session says so (`mode: "v0_rules"` + `fallbackReason`).
+ * It never changes the request analysis provider.
+ */
+export const RESPONSE_MODES = ["server", "ai"] as const;
+export type ResponseMode = (typeof RESPONSE_MODES)[number];
 
 export interface AgentRunMeta {
   model: string | null;
@@ -129,6 +140,27 @@ export interface AgentRunMeta {
   engine?: "independent_agents" | "single_call_script";
   /** Requests actually sent to the provider (1 in single-call test mode). */
   realModelCalls?: number;
+  /**
+   * Technical summary (added with the provider layer). Every number is either counted by the engine or reported by the
+   * provider; nothing is estimated. All optional: older sessions don't have them.
+   */
+  provider?: string | null;
+  buyerModel?: string | null;
+  sellerModel?: string | null;
+  explanationModel?: string | null;
+  http429?: number;
+  /** Sum of reasoning tokens when the provider reported them; null/absent = not reported. */
+  reasoningTokens?: number | null;
+  durationMs?: number;
+  /** "completed", or why the run stopped early (deadline, call_cap, quota_exhausted, model_unavailable...). */
+  endedReason?: string;
+  /** Agent turns that produced a recorded reply, split by who wrote the text. */
+  turns?: { ai: number; fallback: number };
+  /** Why turns fell back to rules: http_429, timeout, provider_error, invalid_structure, policy_rejected, call_budget, deadline, quota_exhausted. */
+  fallbackCauses?: Record<string, number>;
+  /** The offer Agent D itself proposed in its last final turn (null if none). The server's ranking decides; a difference is a recorded discrepancy. */
+  agentProposalOfferId?: string | null;
+  roles?: Record<string, { attempts: number; succeeded: number; failed: number; http429: number; inputTokens: number; outputTokens: number; reasoningTokens: number | null; models: string[] }>;
 }
 
 export type AiStatus = "pending" | "succeeded" | "fallback" | "failed";
@@ -151,6 +183,10 @@ export interface NegotiationSession {
   mode?: NegotiationMode;
   /** Why the V0 simulation was used instead of the multi-agent run (null when not a fallback). */
   fallbackReason?: string | null;
+  /** The response mode requested before the negotiation (absent on sessions created before V5). Fixed for the whole session. */
+  responseMode?: ResponseMode;
+  /** Supabase user that owns this session, set by the server from the verified login (never from the client). Null/absent = anonymous. */
+  ownerId?: string | null;
   agentRun?: AgentRunMeta;
 }
 
@@ -179,6 +215,8 @@ export interface PaymentAttempt {
   createdAt: string;
   updatedAt: string;
   failureCode: string | null;
+  /** Owner of the negotiation this payment belongs to (copied from the session, which got it from the verified login). */
+  ownerId?: string | null;
 }
 
 export interface ApiError {

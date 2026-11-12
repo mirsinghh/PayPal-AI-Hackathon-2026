@@ -21,7 +21,7 @@ export interface ActivityLine {
 }
 
 /** The model-written origins the backend records: seller/buyer turns say "gemini"; the buyer's final choice says "llm". */
-export const isAi = (source: unknown): boolean => source === "gemini" || source === "llm";
+export const isAi = (source: unknown): boolean => source === "gemini" || source === "groq" || source === "llm";
 
 const num = (v: unknown): number | null => (typeof v === "number" && Number.isFinite(v) ? v : null);
 const brandOf = (e: NegotiationEvent): string => (e.sellerId ? SELLER_BRANDS[e.sellerId].brand : "A store");

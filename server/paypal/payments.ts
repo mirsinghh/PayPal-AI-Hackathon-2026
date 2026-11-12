@@ -105,6 +105,7 @@ export async function createPaymentOrder(
       createdAt: now,
       updatedAt: now,
       failureCode: null,
+      ownerId: session.ownerId ?? null,
     };
     await savePayment(attempt);
     try {

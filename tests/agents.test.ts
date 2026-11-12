@@ -34,7 +34,8 @@ const intent: ProductIntent = {
 /* ---------- scripted model ---------- */
 
 interface BookRow {
-  sellerId: string;
+  store: string;
+  sellerId?: string;
   offerId: string;
   itemPriceCents: number;
   itemPrice: string;
@@ -95,7 +96,7 @@ function good(c: Ctx): unknown {
     return {
       rationale: "Asking every seller for a small discount.",
       moves: u!.offers!.map((o) => ({
-        sellerId: o.sellerId,
+        store: o.store,
         action: "counter",
         targetPriceCents: Math.floor(o.itemPriceCents * 0.97),
         message: `Can you beat ${o.itemPrice}?`,
@@ -103,7 +104,7 @@ function good(c: Ctx): unknown {
     };
   }
   const best = u!.offers!.filter((o) => o.withinBudget).sort((a, b) => a.total.localeCompare(b.total, "en", { numeric: true }))[0];
-  return { chosenOfferId: best.offerId, summary: `Best value for you at ${best.total} all-in.`, reasons: ["Lowest total within budget."], tradeoffs: [] };
+  return { chosenOfferId: (u as unknown as { serverRecommendedOfferId?: string }).serverRecommendedOfferId ?? best.offerId, summary: `Best value for you at ${best.total} all-in.`, reasons: ["A good balance of price and delivery."], tradeoffs: [] };
 }
 
 async function newSession(caller: ModelCaller | null = fakeModel().caller): Promise<{ s: NegotiationSession; run: (() => Promise<void>) | null }> {

@@ -24,7 +24,7 @@ function Origin({ m }: { m: V4Message }) {
   return (
     <span className="inline-flex items-center gap-1.5 text-[0.7rem] font-bold text-v3-ink2" title={m.scripted ? "A scripted, in-character line from the rule-based simulation. No AI model wrote it." : undefined}>
       <span aria-hidden className={`size-1.5 rounded-full ${ORIGIN_DOT[m.origin]}`} />
-      {ORIGIN_LABEL[m.origin]}
+      {m.authorLabel ?? ORIGIN_LABEL[m.origin]}
       {m.scripted && <span className="font-semibold">· scripted line</span>}
     </span>
   );
@@ -60,6 +60,7 @@ function Tech({ m, live }: { m: V4Message; live: boolean }) {
     ["Time", clock(m.atMs, live)],
     ...(m.round !== null ? ([["Round", String(m.round)]] as [string, string][]) : []),
     ["Origin", m.scripted ? "Rule engine · scripted line" : (m.tech.source ?? "rule engine / server")],
+    ...(m.tech.provider ? ([["Provider", m.tech.provider]] as [string, string][]) : []),
     ...(m.tech.model ? ([["Model", m.tech.model]] as [string, string][]) : []),
     ...(m.tech.latencyMs !== null ? ([["Latency", `${m.tech.latencyMs} ms`]] as [string, string][]) : []),
     ...(m.tech.reasons.length ? ([["Reasons", m.tech.reasons.join(", ")]] as [string, string][]) : []),

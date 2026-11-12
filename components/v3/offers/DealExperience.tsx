@@ -1,5 +1,6 @@
 "use client";
 
+import { fallbackReasonLabel } from "@/lib/v5/response-mode";
 import { BaseLink } from "@/components/v3/BaseLink";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
@@ -29,7 +30,7 @@ const SORTS: { id: SortKey; label: string }[] = [
 const AUTO_CHECKOUT_MS = 2200;
 const PRIORITY_LABEL = { lowest_price: "Lowest price", fast_delivery: "Fast delivery", best_value: "Best value" } as const;
 
-export function DealExperience({ id, labSlot }: { id: string; /** V4: renders the Decision Lab between the recommendation and the comparison. */ labSlot?: (s: SessionWithPayment) => ReactNode }) {
+export function DealExperience({ id, labSlot, analysisLabel }: { id: string; /** V4: renders the Decision Lab between the recommendation and the comparison. */ labSlot?: (s: SessionWithPayment) => ReactNode; /** V4: label of the explanation (provider and model, or rules). */ analysisLabel?: (ev: SessionWithPayment["evaluation"]) => string }) {
   usePreloadAgentD(["success", "accept", "idle"]);
   const { state, reload } = useSession(id);
   if (state.status === "loading")
@@ -63,10 +64,10 @@ export function DealExperience({ id, labSlot }: { id: string; /** V4: renders th
         <AgentD state="reject" size={120} label={null} />
       </ErrorScreen>
     );
-  return <Deal s={s} winner={winner} labSlot={labSlot} />;
+  return <Deal s={s} winner={winner} labSlot={labSlot} analysisLabel={analysisLabel} />;
 }
 
-function Deal({ s, winner, labSlot }: { s: SessionWithPayment; winner: Offer; labSlot?: (s: SessionWithPayment) => ReactNode }) {
+function Deal({ s, winner, labSlot, analysisLabel }: { s: SessionWithPayment; winner: Offer; labSlot?: (s: SessionWithPayment) => ReactNode; analysisLabel?: (ev: SessionWithPayment["evaluation"]) => string }) {
   const h1 = useRef<HTMLHeadingElement>(null);
   const router = useRouter();
   const base = useAppBase();
@@ -217,11 +218,13 @@ function Deal({ s, winner, labSlot }: { s: SessionWithPayment; winner: Offer; la
             <div className="mt-8 border-t border-v3-line pt-7">
               <div className="flex flex-wrap items-center gap-2">
                 <p className="v3-eyebrow">Why this offer</p>
-                {ev.source === "llm" ? <Chip tone="primary">AI analysis{ev.modelName ? ` · ${ev.modelName}` : ""}</Chip> : <Chip tone="accent">Rule-based explanation</Chip>}
+                {ev.source === "llm" ? <Chip tone="primary">{analysisLabel ? analysisLabel(ev) : `AI analysis${ev.modelName ? ` · ${ev.modelName}` : ""}`}</Chip> : <Chip tone="accent">{analysisLabel ? analysisLabel(ev) : "Rule-based explanation"}</Chip>}
               </div>
               {s.mode === "v0_rules" && s.fallbackReason && (
                 <Notice tone="warn" className="mt-3">
-                  Multi-agent AI negotiation wasn&apos;t used ({s.fallbackReason.replace(/_/g, " ")}); this is the rule-based simulation.
+                  {s.responseMode === "ai"
+                    ? `You chose AI Responses, but AI could not run (${fallbackReasonLabel(s.fallbackReason)}); the stores answered with backup server rules.`
+                    : `Multi-agent AI negotiation wasn't used (${s.fallbackReason.replace(/_/g, " ")}); this is the rule-based simulation.`}
                 </Notice>
               )}
               {ev.source === "rules_fallback" && (

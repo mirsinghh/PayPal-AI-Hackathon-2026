@@ -3,6 +3,7 @@
 import { DealExperience } from "@/components/v3/offers/DealExperience";
 import { DecisionLab } from "@/components/v4/lab/DecisionLab";
 import { buildLab } from "@/lib/v4/lab";
+import { analysisLabel } from "@/lib/v4/provider";
 import type { SessionWithPayment } from "@/lib/api";
 
 /**
@@ -10,7 +11,7 @@ import type { SessionWithPayment } from "@/lib/api";
  * placed between the recommendation and the full comparison. Approval and payment behave exactly as in V3.
  */
 export function V4Deal({ id }: { id: string }) {
-  return <DealExperience id={id} labSlot={(s: SessionWithPayment) => <LabSection s={s} />} />;
+  return <DealExperience id={id} labSlot={(s: SessionWithPayment) => <LabSection s={s} />} analysisLabel={analysisLabel} />;
 }
 
 function LabSection({ s }: { s: SessionWithPayment }) {

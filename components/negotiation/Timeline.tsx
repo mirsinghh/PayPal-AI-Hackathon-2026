@@ -12,7 +12,7 @@ import { TypingDots } from "@/components/ui";
 
 function SourceTag({ payload }: { payload: Record<string, unknown> }) {
   const src = payload.source;
-  if (src === "gemini")
+  if (src === "gemini" || src === "groq")
     return <span className="rounded-sm border border-primary/25 bg-primary-soft px-1 text-caption font-medium text-primary">AI reply</span>;
   if (src === "rules_fallback")
     return <span className="rounded-sm border border-warning-line bg-warning-soft px-1 text-caption font-medium text-warning">Rules fallback</span>;

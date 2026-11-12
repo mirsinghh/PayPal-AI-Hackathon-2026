@@ -28,7 +28,7 @@ const intent: ProductIntent = {
 };
 
 /* ---------- a scripted model, same contract as tests/agents.test.ts ---------- */
-interface Row { sellerId: string; offerId: string; itemPriceCents: number; itemPrice: string; total: string; withinBudget: boolean }
+interface Row { store: string; sellerId?: string; offerId: string; itemPriceCents: number; itemPrice: string; total: string; withinBudget: boolean }
 interface Prompt { turn?: string; yourListPriceCents?: number; yourCurrentItemPriceCents?: number; offers?: Row[] }
 type Handler = (c: { agent: string; user: Prompt | null; nth: number }) => unknown;
 
@@ -59,11 +59,11 @@ function good({ agent, user: u }: { agent: string; user: Prompt | null; nth: num
   if (String(u?.turn).startsWith("negotiation_round")) {
     return {
       rationale: "Asking every seller for a small discount.",
-      moves: u!.offers!.map((o) => ({ sellerId: o.sellerId, action: "counter", targetPriceCents: Math.floor(o.itemPriceCents * 0.97), message: `Can you beat ${o.itemPrice}?` })),
+      moves: u!.offers!.map((o) => ({ store: o.store, action: "counter", targetPriceCents: Math.floor(o.itemPriceCents * 0.97), message: `Can you beat ${o.itemPrice}?` })),
     };
   }
   const best = u!.offers!.filter((o) => o.withinBudget).sort((a, b) => a.total.localeCompare(b.total, "en", { numeric: true }))[0];
-  return { chosenOfferId: best.offerId, summary: `Best value for you at ${best.total} all-in.`, reasons: ["Lowest total within budget."], tradeoffs: [] };
+  return { chosenOfferId: (u as unknown as { serverRecommendedOfferId?: string }).serverRecommendedOfferId ?? best.offerId, summary: `Best value for you at ${best.total} all-in.`, reasons: ["A good balance of price and delivery."], tradeoffs: [] };
 }
 
 async function liveSession(handler: Handler): Promise<NegotiationSession> {

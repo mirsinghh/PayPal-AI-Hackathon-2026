@@ -1,17 +1,11 @@
-"use client";
-
-import { useEngineMode } from "@/lib/v3/use-engine-mode";
-
 /** What a judge or a customer can rely on, stated plainly. Mirrors the server code, not the marketing. The engine row follows /api/config. */
 export function TransparencyLedger() {
-  const { multiAgent } = useEngineMode();
   const rows: { real: boolean; k: string; v: string }[] = [
     { real: true, k: "PayPal Sandbox payments", v: "Orders are created and captured through the PayPal API. The amount is set on the server from the offer you approved." },
     { real: true, k: "Your approval", v: "The server will not create an order until you approve the exact offer. Approval and PayPal authorisation are separate steps." },
     { real: true, k: "Server-side price checks", v: "Every price is validated against the store's policy and your budget before it can be recommended or paid." },
-    multiAgent
-      ? { real: true, k: "AI agents", v: "The buyer and seller agents are real AI (Google Gemini). Their proposals are validated by the server, and a recorded fallback is shown whenever a call fails or is rejected." }
-      : { real: false, k: "The negotiation", v: "A deterministic rule engine plays the stores. The demo above is a recorded run of it, and your live screen replays a run the server already computed." },
+    { real: false, k: "Server Responses", v: "A deterministic rule engine plays the stores. The demo above is a recorded run of it, and your screen replays a run the server already computed." },
+    { real: true, k: "AI Responses (your choice)", v: "The buyer and the store agents are real AI models configured on the server. Their proposals are validated by the server, and any backup reply is labelled as such, never shown as AI." },
     { real: false, k: "Stores, stock and delivery", v: "Four fictional merchants with demo inventory. Nothing is shipped and no real purchase happens." },
   ];
   return (

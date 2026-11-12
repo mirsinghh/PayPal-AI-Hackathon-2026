@@ -1,9 +1,17 @@
 import { apiError } from "@/server/http";
 import { PaymentError, getPaymentStatus } from "@/server/paypal/payments";
+import { getPaymentByOrderId, getSession } from "@/server/db/store";
+import { ownerAllowed } from "@/server/auth/request";
 
-export async function GET(_req: Request, ctx: { params: Promise<{ orderId: string }> }) {
+export async function GET(req: Request, ctx: { params: Promise<{ orderId: string }> }) {
   const { orderId } = await ctx.params;
   try {
+    const attempt = await getPaymentByOrderId(orderId);
+    const owned = attempt ? await getSession(attempt.sessionId) : null;
+    if (owned) {
+      const guard = await ownerAllowed(req, owned.ownerId);
+      if (!guard.ok) return guard.res;
+    }
     return Response.json(await getPaymentStatus(orderId));
   } catch (e) {
     if (e instanceof PaymentError) return apiError(e.status, e.code, e.message, { retryable: e.retryable });

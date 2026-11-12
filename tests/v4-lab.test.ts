@@ -110,7 +110,7 @@ describe("Decision Lab data", () => {
 });
 
 /* ---------- a (scripted) multi-agent session: AI explanation, final-choice event ---------- */
-interface Row { sellerId: string; offerId: string; itemPriceCents: number; itemPrice: string; total: string; withinBudget: boolean }
+interface Row { store: string; sellerId?: string; offerId: string; itemPriceCents: number; itemPrice: string; total: string; withinBudget: boolean }
 interface Prompt { turn?: string; yourListPriceCents?: number; yourCurrentItemPriceCents?: number; offers?: Row[] }
 
 function fakeModel(): ModelCaller {
@@ -127,10 +127,10 @@ function fakeModel(): ModelCaller {
     if (agent === "seller") {
       out = u?.turn === "opening" ? { action: "quote", priceCents: u.yourListPriceCents!, message: "Here is my price for this item." } : { action: "concede", priceCents: u!.yourCurrentItemPriceCents! - Math.max(1, Math.floor(u!.yourCurrentItemPriceCents! / 100)), message: "A little better, as requested." };
     } else if (String(u?.turn).startsWith("negotiation_round")) {
-      out = { rationale: "Asking every seller for a small discount.", moves: u!.offers!.map((o) => ({ sellerId: o.sellerId, action: "counter", targetPriceCents: Math.floor(o.itemPriceCents * 0.97), message: `Can you beat ${o.itemPrice}?` })) };
+      out = { rationale: "Asking every seller for a small discount.", moves: u!.offers!.map((o) => ({ store: o.store, action: "counter", targetPriceCents: Math.floor(o.itemPriceCents * 0.97), message: `Can you beat ${o.itemPrice}?` })) };
     } else {
       const best = u!.offers!.filter((o) => o.withinBudget).sort((a, b) => a.total.localeCompare(b.total, "en", { numeric: true }))[0];
-      out = { chosenOfferId: best.offerId, summary: `Best value for you at ${best.total} all-in.`, reasons: ["Lowest total within budget."], tradeoffs: ["Slower delivery than the fastest store."] };
+      out = { chosenOfferId: (u as unknown as { serverRecommendedOfferId?: string }).serverRecommendedOfferId ?? best.offerId, summary: `Best value for you at ${best.total} all-in.`, reasons: ["A good balance of price and delivery."], tradeoffs: ["Slower delivery than the fastest store."] };
     }
     return { text: JSON.stringify(out), model: "fake-model", inputTokens: 1, outputTokens: 1 };
   };
@@ -155,7 +155,7 @@ describe("Decision Lab on a multi-agent session", () => {
     await runMultiAgentNegotiation(session.sessionId, intent, "headphones", caller, {});
     const stored = (await getSession(session.sessionId))!;
     const lab = buildLab(stored)!;
-    expect(lab.explanation).toEqual({ text: stored.evaluation.aiSummary, origin: "ai", model: "fake-model" });
+    expect(lab.explanation).toEqual({ text: stored.evaluation.aiSummary, origin: "ai", model: "fake-model", provider: "gemini" }); // events without provider metadata predate Groq: they were Gemini
     const expl = lab.conclusions[0].evidence[0];
     expect(expl.origin).toBe("ai");
     const final = stored.events.find((e) => e.type === "BUYER_DECISION" && e.payload.final === true)!;

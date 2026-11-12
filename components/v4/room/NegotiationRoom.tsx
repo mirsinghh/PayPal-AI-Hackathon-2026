@@ -1,6 +1,7 @@
 "use client";
 
-import Link from "next/link";
+import { BaseLink } from "@/components/v3/BaseLink";
+import { modeBanner, modeChip } from "@/lib/v5/response-mode";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useSession } from "@/lib/api";
 import { deriveDraft, deriveSellers, type SellerState } from "@/lib/negotiation-view";
@@ -20,6 +21,8 @@ import { isSellerId, stallPresentation } from "@/lib/v3/stage";
 import { buildV4Conversation, type V4Message } from "@/lib/v4/conversation";
 import { buildLab, type EventRef } from "@/lib/v4/lab";
 import { AGENT_D_PERSONA, SELLER_PERSONA } from "@/lib/v4/personas";
+import { engineHonesty } from "@/lib/v4/provider";
+import { RunSummary } from "@/components/v4/room/RunSummary";
 import { Chip, ErrorScreen, LoadingScreen, Notice, ProductImage, StoreMark, TypingDots, btn } from "@/components/v3/ui";
 import { IconAlert, IconArrow, IconCheck, IconPackage, IconShield, IconTruck } from "@/components/v3/icons";
 import { AgentD, type DirectorHandle } from "@/components/v3/mascot/AgentD";
@@ -102,6 +105,9 @@ function Room({ session }: { session: NegotiationSession }) {
   const done = finished && !failed && !!winner && session.status !== "negotiating";
   const lab = useMemo(() => (done ? buildLab(session) : null), [done, session]);
   const { intent } = session;
+  const banner = modeBanner(session);
+  const chip = modeChip(session);
+  const honesty = useMemo(() => engineHonesty(visible, session.agentRun?.provider ?? (session.agentRun?.model ? "gemini" : null)), [visible, session.agentRun]);
 
   // Who the room is about right now: the store Agent D is dealing with (the director's spot), unless you picked one.
   const spot = positionOf(agent.director);
@@ -142,18 +148,25 @@ function Room({ session }: { session: NegotiationSession }) {
             <span>{PRIORITY_LABEL[intent.priority]}</span>
           </p>
         </div>
-        {live ? <Chip tone="primary">Live AI agents · demo stores</Chip> : <Chip tone="accent">Rule-based simulation · replay</Chip>}
+        <div className="flex flex-wrap items-center gap-2">
+          {chip && <Chip tone={chip.tone}>{chip.text}</Chip>}
+          {live ? <Chip tone={honesty.level === "all_ai" || honesty.level === "mixed" ? "primary" : "warn"}>{honesty.label}</Chip> : <Chip tone="accent">Rule-based simulation · replay</Chip>}
+        </div>
       </header>
 
       <div className="mt-5 space-y-3">
+        {banner && <Notice tone={banner.tone}>{banner.text}</Notice>}
         {live ? (
           <>
             <Notice tone="info">{AI_DEMO_NOTICE}</Notice>
+            {finished && (honesty.level === "mostly_rules" || honesty.level === "no_ai") && (
+              <Notice tone="warn">Most turns of this run were written by the rules engine because the AI provider was unavailable (rate limit or errors). Each message is labelled with who really wrote it.</Notice>
+            )}
             {session.agentRun?.engine === "single_call_script" && <Notice tone="warn">Test mode: a single AI call wrote the whole negotiation script and the server validated every step. These are not independent agents.</Notice>}
           </>
         ) : (
-          <Notice tone={session.fallbackReason ? "warn" : "info"}>
-            {session.fallbackReason ? `Multi-agent AI negotiation wasn't used (${session.fallbackReason.replace(/_/g, " ")}). ` : ""}
+          <Notice tone={session.fallbackReason && !banner ? "warn" : "info"}>
+            {session.fallbackReason && !banner ? `Multi-agent AI negotiation wasn't used (${session.fallbackReason.replace(/_/g, " ")}). ` : ""}
             This is a replay of a rule-based simulation: the server computed all four offers when you started. The characters&apos; lines are scripted from validated data; no AI wrote them, and the stores are not real.
           </Notice>
         )}
@@ -228,9 +241,9 @@ function Room({ session }: { session: NegotiationSession }) {
                 >
                   Open Decision Lab
                 </button>
-                <Link href={`/v4/deals/${session.sessionId}`} className={btn("primary", "lg", "w-full sm:w-auto")}>
+                <BaseLink to={`/deals/${session.sessionId}`} className={btn("primary", "lg", "w-full sm:w-auto")}>
                   Review the offers <IconArrow />
-                </Link>
+                </BaseLink>
               </div>
             </section>
           )}
@@ -238,9 +251,9 @@ function Room({ session }: { session: NegotiationSession }) {
           {failed && (
             <section className="v3-card border-v3-danger-line p-5">
               <p className="font-bold">The negotiation didn&apos;t produce an offer within your budget. Nothing was paid.</p>
-              <Link href="/v4/brief" className={btn("primary", "md", "mt-4")}>
+              <BaseLink to="/brief" className={btn("primary", "md", "mt-4")}>
                 Start a new mission
-              </Link>
+              </BaseLink>
             </section>
           )}
 
@@ -298,6 +311,7 @@ function Room({ session }: { session: NegotiationSession }) {
         {/* Side: progress, best offers, details. */}
         <div className="min-w-0 space-y-6">
           <ActivityPanel current={status.text} tone={status.tone} recent={activity} live={live} />
+          <RunSummary session={session} />
           <Leaderboard sellers={sellers} budgetCents={intent.budgetCents} draftLowest={draft.lowest} done={done} />
           {selected && <StoreDetail s={selected} live={live} onClose={() => setSelectedId(null)} />}
         </div>
@@ -425,7 +439,7 @@ function RoomStage({
             {buyerSays}
             {ask && (
               <span className="mt-1.5 block text-[0.66rem] font-bold text-v3-ink2">
-                {ask.origin === "ai" ? "AI agent message" : ask.origin === "fallback" ? "Rules fallback" : "Rule-based simulation"}
+                {ask.authorLabel ?? (ask.origin === "ai" ? "AI agent message" : ask.origin === "fallback" ? "Rules fallback" : "Rule-based simulation")}
                 {ask.scripted ? " · scripted line" : ""}
               </span>
             )}
@@ -463,7 +477,7 @@ function RoomStage({
                     </span>
                     {sellerSays}
                     <span className="mt-1.5 block text-[0.66rem] font-bold text-v3-ink2">
-                      {reply?.origin === "ai" ? "AI agent message" : reply?.origin === "fallback" ? "Rules fallback" : "Rule-based simulation"}
+                      {reply?.authorLabel ?? (reply?.origin === "ai" ? "AI agent message" : reply?.origin === "fallback" ? "Rules fallback" : "Rule-based simulation")}
                       {reply?.scripted ? " · scripted line" : ""}
                     </span>
                   </p>

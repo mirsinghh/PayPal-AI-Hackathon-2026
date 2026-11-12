@@ -12,7 +12,7 @@ const llmSchema = z.object({
 });
 
 /** Takes the system+user prompts and returns raw model text. Injectable for tests. */
-export type LlmCaller = (system: string, user: string) => Promise<{ text: string; model: string }>;
+export type LlmCaller = (system: string, user: string) => Promise<{ text: string; model: string; provider?: string }>;
 
 /** Google Gemini (free tier) through the REST API. No SDK needed. */
 export function geminiCaller(): LlmCaller | null {
@@ -47,7 +47,7 @@ export function geminiCaller(): LlmCaller | null {
       .join("")
       .trim();
     if (!text) throw new Error("gemini_empty");
-    return { text, model };
+    return { text, model, provider: "gemini" };
   };
 }
 
@@ -156,6 +156,7 @@ export async function explain(
         tradeoffs: f.tradeoffs,
         source: "rules_fallback",
         modelName: null,
+        provider: null,
       },
     };
   };
@@ -165,7 +166,7 @@ export async function explain(
   const offerIds = new Set(offers.map((o) => o.offerId));
   for (let attempt = 0; attempt < 2; attempt++) {
     try {
-      const { text, model } = await caller(SYSTEM, user);
+      const { text, model, provider } = await caller(SYSTEM, user);
       const parsed = llmSchema.parse(extractJson(text));
       if (!parsed.references.every((r) => offerIds.has(r))) throw new Error("bad_reference");
       if (!parsed.references.includes(ranking.recommendedOfferId)) throw new Error("winner_not_referenced");
@@ -180,6 +181,7 @@ export async function explain(
           tradeoffs: parsed.tradeoffs,
           source: "llm",
           modelName: model,
+          provider: provider ?? null,
         },
       };
     } catch (err) {

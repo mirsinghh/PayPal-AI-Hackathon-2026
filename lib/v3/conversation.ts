@@ -58,7 +58,7 @@ export interface ChatMessage {
   /** Short checks/facts from the payload (score, within budget, rejection reason). */
   facts: string[];
   amounts: AmountMention[];
-  tech: { type: string; source: string | null; model: string | null; latencyMs: number | null; reasons: string[] };
+  tech: { type: string; source: string | null; provider: string | null; model: string | null; latencyMs: number | null; reasons: string[] };
 }
 
 const num = (v: unknown): number | null => (typeof v === "number" && Number.isFinite(v) ? v : null);
@@ -126,7 +126,7 @@ export function buildConversation(events: readonly NegotiationEvent[], ctx: { bu
         round,
         facts: [],
         amounts: text ? amountsInText(text).map((cents) => ({ cents, recorded: recorded.has(cents) })) : [],
-        tech: { type: e.type, source: src, model: str(e.payload.model), latencyMs: num(e.payload.latencyMs), reasons: Array.isArray(e.payload.reasons) ? e.payload.reasons.map(String) : [] },
+        tech: { type: e.type, source: src, provider: str(e.payload.provider), model: str(e.payload.model), latencyMs: num(e.payload.latencyMs), reasons: Array.isArray(e.payload.reasons) ? e.payload.reasons.map(String) : [] },
         ...patch,
       };
     };

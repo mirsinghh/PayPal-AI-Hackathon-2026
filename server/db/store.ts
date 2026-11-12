@@ -1,6 +1,7 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import type { NegotiationSession, PaymentAttempt } from "@/shared/contracts/types";
+import { LEGACY_PAYMENT_COLUMNS, LEGACY_SESSION_COLUMNS, paymentRow, sessionRow } from "./summary";
 
 /**
  * Persistence behind a small interface with two backends:
@@ -102,12 +103,22 @@ function supabaseBackend(url: string, key: string): Backend {
     if (!res.ok) throw new Error(`supabase_${res.status}`);
     return res;
   }
-  const upsert = (table: string, row: Record<string, unknown>) =>
+  const post = (table: string, row: Record<string, unknown>) =>
     sb(`/${table}?on_conflict=id`, {
       method: "POST",
       headers: { prefer: "resolution=merge-duplicates,return=minimal" },
       body: JSON.stringify(row),
     });
+  // If the V5 migration (extra columns) hasn't been applied yet, PostgREST answers 400: retry with the original columns so
+  // negotiations and payments keep working (history just stays empty until the migration is run).
+  const upsert = async (table: string, row: Record<string, unknown>, legacy: readonly string[]) => {
+    try {
+      return await post(table, row);
+    } catch (e) {
+      if ((e as Error).message !== "supabase_400") throw e;
+      return post(table, Object.fromEntries(Object.entries(row).filter(([k]) => legacy.includes(k))));
+    }
+  };
   const selectData = async <T>(table: string, filter: string): Promise<T[]> => {
     const rows = (await (await sb(`/${table}?${filter}&select=data`)).json()) as { data: T }[];
     return rows.map((r) => r.data);
@@ -119,16 +130,10 @@ function supabaseBackend(url: string, key: string): Backend {
       return (await selectData<NegotiationSession>("sessions", `id=eq.${enc(id)}&limit=1`))[0] ?? null;
     },
     async saveSession(s) {
-      await upsert("sessions", { id: s.sessionId, data: s, expires_at: s.expiresAt });
+      await upsert("sessions", sessionRow(s), LEGACY_SESSION_COLUMNS);
     },
     async savePayment(p) {
-      await upsert("payments", {
-        id: p.paymentAttemptId,
-        session_id: p.sessionId,
-        paypal_order_id: p.paypalOrderId,
-        data: p,
-        updated_at: p.updatedAt,
-      });
+      await upsert("payments", paymentRow(p), LEGACY_PAYMENT_COLUMNS);
     },
     async paymentsBySession(sessionId) {
       return selectData<PaymentAttempt>("payments", `session_id=eq.${enc(sessionId)}`);

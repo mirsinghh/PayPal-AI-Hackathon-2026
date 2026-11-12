@@ -7,19 +7,39 @@ export interface Turn {
   text: string;
 }
 
+/** What an agent is for. Providers may use a different model per role (e.g. Groq: 120B buyer, 20B sellers). */
+export type AgentRole = "buyer" | "seller" | "explanation";
+
+/** A strict JSON Schema for providers with Structured Outputs. The server still validates everything with Zod and the business rules. */
+export interface WireSchema {
+  name: string;
+  schema: Record<string, unknown>;
+}
+
 export interface ModelRequest {
   system: string;
   /** This agent's own prior turns (its private memory). Never shared with other agents. */
   history: Turn[];
   user: string;
   maxOutputTokens: number;
+  /** Which kind of agent is asking (provider routing). Absent in older callers: treated as "seller". */
+  role?: AgentRole;
+  /** Absolute time after which the run no longer wants an answer (providers must not wait past it). */
+  deadlineAt?: number;
+  wire?: WireSchema;
 }
 
 export interface ModelResponse {
   text: string;
   model: string;
+  /** "groq" | "gemini" | ... Absent for injected test callers. */
+  provider?: string;
   inputTokens: number;
   outputTokens: number;
+  /** Only when the provider reports it. Never estimated. */
+  reasoningTokens?: number | null;
+  /** Provider-side remark about this answer (e.g. a failed structured generation). Shown in rejection details. */
+  note?: string;
 }
 
 /** One real model call. Injectable so tests never hit the network. */
@@ -30,8 +50,18 @@ export class ModelHttpError extends Error {
     public status: number,
     /** Provider-suggested wait before retrying (429). */
     public retryAfterMs: number | null = null,
+    label = "gemini",
+    /** Provider's own message (and failed output snippet), kept in rejection details. Never contains keys. */
+    public detail: string | null = null,
   ) {
-    super(`gemini_http_${status}`);
+    super(`${label}_http_${status}`);
+  }
+}
+
+/** The provider cannot serve this request before the run's deadline (rate/token pacing). Not a provider failure. */
+export class DeadlineError extends Error {
+  constructor() {
+    super("deadline");
   }
 }
 
@@ -73,10 +103,10 @@ export function sharedRateLimiter(rpm: number): RateLimiter {
 }
 
 /** Google Gemini over REST. Key goes in a header, never in the URL or logs. */
-export function geminiModelCaller(): ModelCaller | null {
-  const apiKey = process.env.AI_API_KEY;
+export function geminiModelCaller(env: Record<string, string | undefined> = process.env): ModelCaller | null {
+  const apiKey = env.AI_API_KEY;
   if (!apiKey || /^your-/i.test(apiKey)) return null;
-  const model = process.env.AI_MODEL || "gemini-3.5-flash";
+  const model = env.AI_MODEL || "gemini-3.5-flash";
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`;
   return async (req) => {
     const res = await fetch(url, {
@@ -100,7 +130,7 @@ export function geminiModelCaller(): ModelCaller | null {
     if (!res.ok) {
       let retryAfterMs: number | null = null;
       if (res.status === 429) {
-        const m = /retry in ([d.]+)s/i.exec(await res.text().catch(() => ""));
+        const m = /retry in ([\d.]+)s/i.exec(await res.text().catch(() => ""));
         if (m) retryAfterMs = Math.ceil(Number(m[1]) * 1000);
       }
       throw new ModelHttpError(res.status, retryAfterMs);
@@ -114,11 +144,28 @@ export function geminiModelCaller(): ModelCaller | null {
     return {
       text,
       model,
+      provider: "gemini",
       inputTokens: data.usageMetadata?.promptTokenCount ?? 0,
       outputTokens: data.usageMetadata?.candidatesTokenCount ?? 0,
     };
   };
 }
+
+/** Per-role accounting of what really happened (only numbers the provider returned or the engine counted). */
+export interface RoleStats {
+  attempts: number;
+  succeeded: number;
+  failed: number;
+  http429: number;
+  inputTokens: number;
+  outputTokens: number;
+  /** Sum of the reasoning tokens the provider reported; null when it never reported any. */
+  reasoningTokens: number | null;
+  models: string[];
+  providers: string[];
+}
+
+const emptyStats = (): RoleStats => ({ attempts: 0, succeeded: 0, failed: 0, http429: 0, inputTokens: 0, outputTokens: 0, reasoningTokens: null, models: [], providers: [] });
 
 /** Shared, per-run accounting: call cap, deadline and token counters. */
 export class RunBudget {
@@ -130,6 +177,9 @@ export class RunBudget {
   succeeded = 0;
   inputTokens = 0;
   outputTokens = 0;
+  reasoningTokens: number | null = null;
+  http429 = 0;
+  readonly roles: Record<AgentRole, RoleStats> = { buyer: emptyStats(), seller: emptyStats(), explanation: emptyStats() };
   constructor(
     private readonly startedAt: number,
     private readonly now: () => number = Date.now,
@@ -140,12 +190,40 @@ export class RunBudget {
     return this.startedAt + this.deadlineMs;
   }
   /** Returns a stop reason, or null when another call is allowed. */
-  stopReason(): "call_cap" | "deadline" | "model_unavailable" | "quota_exhausted" | null {
+  stopReason(reserve = 0): "call_cap" | "deadline" | "model_unavailable" | "quota_exhausted" | null {
     if (this.quotaExhausted) return "quota_exhausted";
-    if (this.attempted - this.transportFailures >= this.maxCalls) return "call_cap";
+    // `reserve` keeps the last calls for the final decision: earlier turns stop `reserve` calls before the cap.
+    if (this.attempted - this.transportFailures >= this.maxCalls - reserve) return "call_cap";
     if (this.transportFailures >= LIMITS.maxTransportFailures) return "model_unavailable";
     if (this.now() - this.startedAt >= this.deadlineMs) return "deadline";
     return null;
+  }
+  recordAttempt(role: AgentRole) {
+    this.roles[role].attempts++;
+  }
+  recordResponse(role: AgentRole, out: ModelResponse) {
+    const r = this.roles[role];
+    r.inputTokens += out.inputTokens;
+    r.outputTokens += out.outputTokens;
+    if (typeof out.reasoningTokens === "number") {
+      r.reasoningTokens = (r.reasoningTokens ?? 0) + out.reasoningTokens;
+      this.reasoningTokens = (this.reasoningTokens ?? 0) + out.reasoningTokens;
+    }
+    if (!r.models.includes(out.model)) r.models.push(out.model);
+    if (out.provider && !r.providers.includes(out.provider)) r.providers.push(out.provider);
+    this.inputTokens += out.inputTokens;
+    this.outputTokens += out.outputTokens;
+  }
+  recordSuccess(role: AgentRole) {
+    this.succeeded++;
+    this.roles[role].succeeded++;
+  }
+  recordFailure(role: AgentRole, status: number | null) {
+    this.roles[role].failed++;
+    if (status === 429) {
+      this.roles[role].http429++;
+      this.http429++;
+    }
   }
 }
 
@@ -155,12 +233,21 @@ export class Agent {
   constructor(
     readonly id: string,
     readonly system: string,
+    readonly role: AgentRole = id === "buyer" ? "buyer" : "seller",
   ) {}
 }
 
 export type AskResult<T> =
-  | { ok: true; value: T; model: string; latencyMs: number; attempts: number; rejections: string[] }
-  | { ok: false; reason: string; attempts: number; rejections: string[] };
+  | { ok: true; value: T; model: string; provider: string | null; latencyMs: number; attempts: number; rejections: string[]; details: string[] }
+  | { ok: false; reason: string; attempts: number; rejections: string[]; details: string[] };
+
+export interface AskOptions {
+  wire?: WireSchema;
+  /** Extra, turn-specific guidance appended to the single corrective message (e.g. the allowed price window). */
+  hint?: (problem: string) => string | null;
+  /** Calls to keep free for later phases (the final decision). */
+  reserve?: number;
+}
 
 function retryable(e: unknown): boolean {
   return !(e instanceof ModelHttpError) || e.status === 429 || e.status >= 500;
@@ -178,17 +265,22 @@ export async function ask<T>(
   prompt: string,
   schema: ZodType<T>,
   validate: (value: T) => string | null,
+  options?: AskOptions | WireSchema,
 ): Promise<AskResult<T>> {
+  const opts: AskOptions = options && "schema" in options ? { wire: options } : (options ?? {});
+  const wire = opts.wire;
   const rejections: string[] = [];
+  const details: string[] = [];
   let user = prompt;
   const scratch: Turn[] = [];
   let attempts = 0;
   for (; attempts < LIMITS.maxAttemptsPerTurn; ) {
-    const stop = budget.stopReason();
-    if (stop) return { ok: false, reason: stop, attempts, rejections };
-    if (budget.limiter && !(await budget.limiter.acquire(budget.deadlineAt))) return { ok: false, reason: "deadline", attempts, rejections };
+    const stop = budget.stopReason(opts.reserve ?? 0);
+    if (stop) return { ok: false, reason: stop, attempts, rejections, details };
+    if (budget.limiter && !(await budget.limiter.acquire(budget.deadlineAt))) return { ok: false, reason: "deadline", attempts, rejections, details };
     attempts++;
     budget.attempted++;
+    budget.recordAttempt(agent.role);
     const t0 = Date.now();
     try {
       const out = await caller({
@@ -196,10 +288,13 @@ export async function ask<T>(
         history: [...agent.history, ...scratch],
         user,
         maxOutputTokens: agent.id === "script" ? LIMITS.maxScriptOutputTokens : agent.id === "buyer" ? LIMITS.maxBuyerOutputTokens : LIMITS.maxOutputTokens,
+        role: agent.role,
+        deadlineAt: budget.deadlineAt,
+        wire,
       });
-      budget.inputTokens += out.inputTokens;
-      budget.outputTokens += out.outputTokens;
+      budget.recordResponse(agent.role, out);
       let problem: string | null = null;
+      let detail = "";
       let value: T | undefined;
       try {
         value = schema.parse(extractJson(out.text));
@@ -207,33 +302,52 @@ export async function ask<T>(
       } catch (e) {
         const issue = e instanceof ZodError ? e.issues[0] : null;
         problem = issue ? `schema_invalid:${issue.path.join(".")}` : e instanceof SyntaxError || (e instanceof Error && e.message === "no_json") ? "not_json" : "schema_invalid";
+        // The real reason, e.g. "rationale: too_big, expected at most 300 characters" (kept in the event details and sent back once).
+        if (out.note) problem = problem ?? "schema_invalid";
+        detail = issue ? `${issue.path.join(".")}: ${issue.code}${"maximum" in issue ? `, at most ${(issue as { maximum: unknown }).maximum}` : ""}${"minimum" in issue ? `, at least ${(issue as { minimum: unknown }).minimum}` : ""} (${issue.message})` : "";
         if (process.env.AGENTS_DEBUG) console.warn(`[agents] ${agent.id} invalid output: ${problem} :: ${out.text.slice(0, 400)}`);
       }
       if (problem === null && value !== undefined) {
-        budget.succeeded++;
+        budget.recordSuccess(agent.role);
         agent.history.push({ role: "user", text: prompt }, { role: "model", text: out.text });
-        return { ok: true, value, model: out.model, latencyMs: Date.now() - t0, attempts, rejections };
+        return { ok: true, value, model: out.model, provider: out.provider ?? null, latencyMs: Date.now() - t0, attempts, rejections, details };
       }
+      budget.recordFailure(agent.role, null);
       rejections.push(problem ?? "invalid");
+      details.push(detail || (problem ?? "invalid"));
       scratch.push({ role: "user", text: user }, { role: "model", text: out.text });
-      user = `Your previous reply was rejected by the server (${problem}). Reply again with ONLY a valid JSON object that respects every rule.`;
+      // Keep a short sample of what the model actually returned when it was structurally invalid (it is the model's own output; no keys).
+      if (/^(schema_invalid|not_json)/.test(problem ?? "")) details[details.length - 1] = `${details[details.length - 1]} | output: ${out.text.slice(0, 200)}`;
+      if (out.note) details[details.length - 1] = `${details[details.length - 1]} [${out.note}]`;
+      // A structural failure that survived the provider's own escalated retry will not be fixed by asking again: stop here.
+      if (out.note?.startsWith("recovered after one escalated retry") && /^(schema_invalid|not_json)/.test(problem ?? "")) return { ok: false, reason: "invalid_output", attempts, rejections, details };
+      const extra = [detail ? `Detail: ${detail}.` : null, opts.hint?.(problem ?? "") ?? null].filter(Boolean).join(" ");
+      user = `Your previous reply was rejected by the server (${problem}). ${extra} Reply again with ONLY a valid JSON object that respects every rule.`;
     } catch (e) {
+      if (e instanceof DeadlineError) return { ok: false, reason: "deadline", attempts, rejections, details };
       budget.transportFailures++;
+      budget.recordFailure(agent.role, e instanceof ModelHttpError ? e.status : null);
       rejections.push(`call_failed:${(e as Error).message.slice(0, 60)}`);
-      if (!retryable(e)) return { ok: false, reason: "call_failed", attempts, rejections };
+      details.push(e instanceof ModelHttpError && e.detail ? e.detail : (e as Error).message.slice(0, 60));
+      if (!retryable(e)) return { ok: false, reason: "call_failed", attempts, rejections, details };
       // Honour the provider's retry hint, but never wait past the run deadline.
       const wait = e instanceof ModelHttpError && e.retryAfterMs ? e.retryAfterMs + 250 : 250;
       if (Date.now() + wait > budget.deadlineAt) {
-        // A long 429 (e.g. daily free-tier quota) cannot be waited out: stop the whole run and trip the breaker.
+        // A long 429 (e.g. daily quota) cannot be waited out: stop the whole run and trip the breaker (per provider).
         if (e instanceof ModelHttpError && e.status === 429 && e.retryAfterMs) {
           budget.quotaExhausted = true;
-          tripQuotaBreaker(e.retryAfterMs);
-          return { ok: false, reason: "quota_exhausted", attempts, rejections };
+          tripQuotaBreaker(e.retryAfterMs, providerKeyOf(e));
+          return { ok: false, reason: "quota_exhausted", attempts, rejections, details };
         }
-        return { ok: false, reason: "deadline", attempts, rejections };
+        return { ok: false, reason: "deadline", attempts, rejections, details };
       }
       await new Promise((r) => setTimeout(r, wait));
     }
   }
-  return { ok: false, reason: rejections.at(-1)?.startsWith("call_failed") ? "call_failed" : "invalid_output", attempts, rejections };
+  return { ok: false, reason: rejections.at(-1)?.startsWith("call_failed") ? "call_failed" : "invalid_output", attempts, rejections, details };
+}
+
+/** Which provider a 429 came from (the error message is `<provider>_http_<status>`). */
+function providerKeyOf(e: ModelHttpError): string {
+  return e.message.split("_http_")[0] || "gemini";
 }

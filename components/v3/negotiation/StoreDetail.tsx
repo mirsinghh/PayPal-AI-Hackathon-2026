@@ -45,7 +45,7 @@ export function StoreDetail({ s, live, onClose }: { s: SellerState; live: boolea
         <Chip tone={p.tone}>{p.label}</Chip>
         {s.rejectedReason && <Chip tone="warn">{s.rejectedReason === "over_budget" ? "Over your budget" : s.rejectedReason === "out_of_stock" ? "Out of stock" : "Failed policy check"}</Chip>}
         {s.score !== null && <Chip tone="success">Scored {s.score}/100</Chip>}
-        {live && s.source === "gemini" && <Chip tone="primary">AI reply</Chip>}
+        {live && (s.source === "gemini" || s.source === "groq") && <Chip tone="primary">AI reply</Chip>}
         {live && s.source === "rules_fallback" && <Chip tone="warn">Rules fallback</Chip>}
       </div>
 

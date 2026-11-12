@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { apiError, readJsonBody } from "@/server/http";
+import { ownerAllowed } from "@/server/auth/request";
 import { getPaymentsBySession, getSession, saveSession, withLock } from "@/server/db/store";
 import { isOfferExpired, isSessionExpired } from "@/server/negotiation/service";
 
@@ -13,6 +14,8 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
   return withLock(`session:${id}`, async () => {
     const session = await getSession(id);
     if (!session) return apiError(404, "NOT_FOUND", "We couldn't find that negotiation.");
+    const guard = await ownerAllowed(req, session.ownerId);
+    if (!guard.ok) return guard.res;
     if (isSessionExpired(session)) return apiError(410, "SESSION_EXPIRED", "Your demo session has expired.");
 
     if (session.status !== "ready" && session.status !== "completed") {

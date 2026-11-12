@@ -34,15 +34,15 @@ export function LiveDemo() {
     <section ref={root} id="demo" aria-labelledby="demo-title" className="mx-auto w-full max-w-[1240px] scroll-mt-24 px-4 py-20 sm:px-6 lg:px-8">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <p className="v3-eyebrow">Watch Agent D in action</p>
+          <p className="v3-eyebrow">Live negotiation demo</p>
           <h2 id="demo-title" className="v3-h2 mt-3 max-w-2xl text-[clamp(2rem,1.4rem+2.6vw,3.4rem)]">
             A negotiation you can <span className="v3-hl">pause</span> and poke.
           </h2>
         </div>
-        <Chip tone="accent">Pre-recorded demo · rule engine · not live store activity</Chip>
+        <Chip tone="accent">Demo · pre-recorded · no AI calls · not saved to your history</Chip>
       </div>
       <p className="mt-4 max-w-2xl text-v3-ink2">
-        This is a recorded run for “{session.intent.productQuery}”. It plays through the same screen you get for your own request. Select a store to see its terms.
+        This is a recorded run for “{session.intent.productQuery}” with fictional stores. It is not your request and it is not a real negotiation: it plays through the same screen you get for your own, so you can see how competing stores improve their offers. Select a store to see its terms.
       </p>
 
       <div className="mt-8 space-y-4">

@@ -163,7 +163,7 @@ function Stall({ s, active, selected, onSelect, live, compact }: { s: SellerStat
           {!compact && (
             <span className="mt-2 flex flex-wrap items-center gap-1.5">
               {eligibility && <Chip tone={eligibility.tone} className="!whitespace-normal">{eligibility.text}</Chip>}
-              {live && s.source === "gemini" && <Chip tone="primary">AI reply</Chip>}
+              {live && (s.source === "gemini" || s.source === "groq") && <Chip tone="primary">AI reply</Chip>}
               {live && s.source === "rules_fallback" && <Chip tone="warn">Rules fallback</Chip>}
             </span>
           )}

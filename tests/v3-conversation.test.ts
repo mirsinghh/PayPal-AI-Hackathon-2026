@@ -126,7 +126,7 @@ describe("rule-based simulation (V0)", () => {
 });
 
 /* ---------- persistence: what the engine stores is exactly what the model said ---------- */
-interface Row { sellerId: string; offerId: string; itemPriceCents: number; itemPrice: string; total: string; withinBudget: boolean }
+interface Row { store: string; sellerId?: string; offerId: string; itemPriceCents: number; itemPrice: string; total: string; withinBudget: boolean }
 interface Prompt { turn?: string; yourListPriceCents?: number; yourCurrentItemPriceCents?: number; offers?: Row[] }
 
 function fakeModel(words: { opening: string; counter: string }): ModelCaller {
@@ -143,10 +143,10 @@ function fakeModel(words: { opening: string; counter: string }): ModelCaller {
     if (agent === "seller") {
       out = u?.turn === "opening" ? { action: "quote", priceCents: u.yourListPriceCents!, message: words.opening } : { action: "concede", priceCents: u!.yourCurrentItemPriceCents! - Math.max(1, Math.floor(u!.yourCurrentItemPriceCents! / 100)), message: words.counter };
     } else if (String(u?.turn).startsWith("negotiation_round")) {
-      out = { rationale: "Asking every seller for a small discount.", moves: u!.offers!.map((o) => ({ sellerId: o.sellerId, action: "counter", targetPriceCents: Math.floor(o.itemPriceCents * 0.97), message: `Can you beat ${o.itemPrice}?` })) };
+      out = { rationale: "Asking every seller for a small discount.", moves: u!.offers!.map((o) => ({ store: o.store, action: "counter", targetPriceCents: Math.floor(o.itemPriceCents * 0.97), message: `Can you beat ${o.itemPrice}?` })) };
     } else {
       const best = u!.offers!.filter((o) => o.withinBudget).sort((a, b) => a.total.localeCompare(b.total, "en", { numeric: true }))[0];
-      out = { chosenOfferId: best.offerId, summary: `Best value for you at ${best.total} all-in.`, reasons: ["Lowest total within budget."], tradeoffs: [] };
+      out = { chosenOfferId: (u as unknown as { serverRecommendedOfferId?: string }).serverRecommendedOfferId ?? best.offerId, summary: `Best value for you at ${best.total} all-in.`, reasons: ["A good balance of price and delivery."], tradeoffs: [] };
     }
     return { text: JSON.stringify(out), model: "fake-model", inputTokens: 1, outputTokens: 1 };
   };
